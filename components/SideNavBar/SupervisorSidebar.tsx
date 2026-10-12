@@ -6,8 +6,10 @@ import {
   FiBarChart2,
   FiCalendar,
   FiClock,
+  FiDroplet,
   FiLogOut,
   FiMapPin,
+  FiTool,
   FiTruck,
   FiUser,
   FiUserCheck,
@@ -46,8 +48,28 @@ const menuItems = [
     icon: FiClock,
   },
   {
+    label: "Fuel Records",
+    href: "/supervisor/fuel",
+    icon: FiDroplet,
+  },
+  {
+    label: "Maintenance",
+    href: "/supervisor/maintenance",
+    icon: FiTool,
+  },
+  {
     label: "Operational Staff",
     href: "/supervisor/operational-staff",
+    icon: FiUserCheck,
+  },
+   {
+    label: "Buses",
+    href: "/supervisor/buses",
+    icon: FiTruck,
+  },
+  {
+    label: "Drivers",
+    href: "/supervisor/drivers",
     icon: FiUserCheck,
   },
   {
@@ -93,11 +115,11 @@ export default function SupervisorSidebar({
             onClick={onClose}
             className="flex items-center gap-3"
           >
-              <img
-            src="/logo-red.png"
-            alt="SRMSS Logo"
-            className="h-10 w-10 rounded-xl object-contain"
-          />
+            <img
+              src="/logo-red.png"
+              alt="SRMSS Logo"
+              className="h-10 w-10 rounded-xl object-contain"
+            />
 
             <div>
               <p className="font-bold tracking-wide text-white">SRMSS</p>

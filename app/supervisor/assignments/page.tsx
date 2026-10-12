@@ -139,6 +139,28 @@ export default function AssignmentsPage() {
       setLoading(true);
       setMessage("");
 
+      // Get the logged-in supervisor
+      const storedUser = localStorage.getItem("srmss_user");
+
+      if (!storedUser) {
+        setMessage("Please log in to view assignment data.");
+        setMessageType("error");
+        return;
+      }
+
+      const loggedInUser = JSON.parse(storedUser);
+      const supervisorDepotId = Number(loggedInUser.depot_id);
+
+      if (
+        loggedInUser.role?.toUpperCase() !== "SUPERVISOR" ||
+        !Number.isInteger(supervisorDepotId) ||
+        supervisorDepotId <= 0
+      ) {
+        setMessage("Your account is not assigned to a valid depot.");
+        setMessageType("error");
+        return;
+      }
+
       const [
         schedulesResponse,
         busesResponse,
@@ -161,19 +183,41 @@ export default function AssignmentsPage() {
       const driverData = getApiData<Driver[]>(driversResponse);
       const assignmentData = getApiData<Assignment[]>(assignmentsResponse);
 
-      setSchedules(Array.isArray(scheduleData) ? scheduleData : []);
-      setBuses(Array.isArray(busData) ? busData : []);
+      // Only records belonging to this supervisor's depot
+      const ownDepotSchedules = (
+        Array.isArray(scheduleData) ? scheduleData : []
+      ).filter((schedule) => Number(schedule.depot_id) === supervisorDepotId);
 
-      setStaff(
-        Array.isArray(staffData)
-          ? staffData.filter(
-              (user) => user.role?.toUpperCase() === "OPERATIONAL_STAFF",
-            )
-          : [],
+      const ownDepotBuses = (Array.isArray(busData) ? busData : []).filter(
+        (bus) => Number(bus.depot_id) === supervisorDepotId,
       );
 
-      setDrivers(Array.isArray(driverData) ? driverData : []);
-      setAssignments(Array.isArray(assignmentData) ? assignmentData : []);
+      const ownDepotStaff = (Array.isArray(staffData) ? staffData : []).filter(
+        (user) =>
+          user.role?.toUpperCase() === "OPERATIONAL_STAFF" &&
+          Number(user.depot_id) === supervisorDepotId,
+      );
+
+      const ownDepotDrivers = (
+        Array.isArray(driverData) ? driverData : []
+      ).filter((driver) => Number(driver.depot_id) === supervisorDepotId);
+
+      // Keep assignments linked to schedules belonging to this depot
+      const ownScheduleIds = new Set(
+        ownDepotSchedules.map((schedule) => Number(schedule.id)),
+      );
+
+      const ownDepotAssignments = (
+        Array.isArray(assignmentData) ? assignmentData : []
+      ).filter((assignment) =>
+        ownScheduleIds.has(Number(assignment.schedule_id)),
+      );
+
+      setSchedules(ownDepotSchedules);
+      setBuses(ownDepotBuses);
+      setStaff(ownDepotStaff);
+      setDrivers(ownDepotDrivers);
+      setAssignments(ownDepotAssignments);
     } catch (error: unknown) {
       console.error("Failed to load assignment data:", error);
 
@@ -260,22 +304,30 @@ export default function AssignmentsPage() {
     });
   }, [drivers, assignments]);
 
-  const availableStaff = useMemo(() => {
-    const assignedStaffIds = new Set(
-      assignments
-        .filter(isActiveAssignment)
-        .map((assignment) => assignment.staff_id),
-    );
+  // const availableStaff = useMemo(() => {
+  //   const assignedStaffIds = new Set(
+  //     assignments
+  //       .filter(isActiveAssignment)
+  //       .map((assignment) => assignment.staff_id),
+  //   );
 
+  //   return staff.filter((member) => {
+  //     const status = member.status?.toUpperCase();
+
+  //     return (
+  //       (status === "AVAILABLE" || status === "ACTIVE") &&
+  //       !assignedStaffIds.has(member.id)
+  //     );
+  //   });
+  // }, [staff, assignments]);
+
+  const availableStaff = useMemo(() => {
     return staff.filter((member) => {
       const status = member.status?.toUpperCase();
 
-      return (
-        (status === "AVAILABLE" || status === "ACTIVE") &&
-        !assignedStaffIds.has(member.id)
-      );
+      return status === "AVAILABLE" || status === "ACTIVE";
     });
-  }, [staff, assignments]);
+  }, [staff]);
 
   const selectedScheduleData = useMemo(
     () =>

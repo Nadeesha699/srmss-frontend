@@ -133,14 +133,19 @@ function formatDate(value?: string) {
 }
 
 function getStatusClass(status?: string) {
-  switch ((status || "PENDING").toUpperCase()) {
+  switch ((status || "REPORTED").toUpperCase()) {
     case "COMPLETED":
     case "RESOLVED":
       return "bg-green-100 text-green-700";
+
     case "IN_PROGRESS":
       return "bg-blue-100 text-blue-700";
+
     case "CANCELLED":
       return "bg-red-100 text-red-700";
+
+    case "REPORTED":
+    case "PENDING":
     default:
       return "bg-amber-100 text-amber-700";
   }
@@ -256,7 +261,7 @@ export default function OperationalStaffMaintenancePage() {
 
       const matchesStatus =
         statusFilter === "ALL" ||
-        (record.status || "PENDING").toUpperCase() === statusFilter;
+        (record.status || "REPORTED").toUpperCase() === statusFilter;
 
       return matchesSearch && matchesStatus;
     });
@@ -332,7 +337,7 @@ export default function OperationalStaffMaintenancePage() {
         description: form.description || null,
         service_date: form.service_date,
         cost: Number(form.cost || 0),
-        status: "PENDING",
+        status: "REPORTED",
         recorded_by: userId,
       };
 
@@ -363,7 +368,7 @@ export default function OperationalStaffMaintenancePage() {
   const openIssues = myRecords.filter(
     (record) =>
       !["COMPLETED", "RESOLVED", "CANCELLED"].includes(
-        (record.status || "PENDING").toUpperCase(),
+        (record.status || "REPORTED").toUpperCase(),
       ),
   ).length;
 
@@ -494,7 +499,7 @@ export default function OperationalStaffMaintenancePage() {
               className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-red-500"
             >
               <option value="ALL">All Statuses</option>
-              <option value="PENDING">Pending</option>
+              <option value="REPORTED">Reported</option>
               <option value="IN_PROGRESS">In Progress</option>
               <option value="COMPLETED">Completed</option>
               <option value="CANCELLED">Cancelled</option>

@@ -136,38 +136,72 @@ export default function SupervisorTripsPage() {
 
   const [error, setError] = useState("");
 
-  const loadTrips = async (showRefresh = false) => {
-    try {
-      if (showRefresh) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
-
-      setError("");
-
-      const response = await axios.get(API_URL);
-
-      const data = response.data?.data;
-
-      if (Array.isArray(data)) {
-        setTrips(data);
-      } else if (Array.isArray(response.data)) {
-        setTrips(response.data);
-      } else {
-        setTrips([]);
-      }
-    } catch (err) {
-      console.error("Failed to load trips:", err);
-
-      setError(
-        "Unable to load trips. Please check the trips API."
-      );
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+ const loadTrips = async (showRefresh = false) => {
+  try {
+    if (showRefresh) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
     }
-  };
+
+    setError("");
+
+    // Get logged-in supervisor
+    const storedUser = localStorage.getItem("srmss_user");
+
+    if (!storedUser) {
+      setError("Please log in to view trips.");
+      setTrips([]);
+      return;
+    }
+
+    const parsedUser = JSON.parse(storedUser);
+    const supervisorDepotId = Number(parsedUser.depot_id);
+
+    if (
+      !Number.isInteger(supervisorDepotId) ||
+      supervisorDepotId <= 0
+    ) {
+      setError("Your account is not assigned to a valid depot.");
+      setTrips([]);
+      return;
+    }
+
+    // Fetch trips
+    const response = await axios.get(API_URL);
+
+    const data = response.data?.data;
+
+    const allTrips = Array.isArray(data)
+      ? data
+      : Array.isArray(response.data)
+        ? response.data
+        : [];
+
+    // Filter trips belonging to the supervisor's depot
+    const depotTrips = allTrips.filter((trip) => {
+      const tripDepotId = Number(
+        trip.depot_id ??
+        trip.schedule_depot_id ??
+        trip.bus_depot_id ??
+        trip.schedule?.depot_id ??
+        trip.bus?.depot_id
+      );
+
+      return tripDepotId === supervisorDepotId;
+    });
+
+    setTrips(depotTrips);
+  } catch (err) {
+    console.error("Failed to load trips:", err);
+
+    setTrips([]);
+    setError("Unable to load trips. Please check the trips API.");
+  } finally {
+    setLoading(false);
+    setRefreshing(false);
+  }
+};
 
   useEffect(() => {
     loadTrips();

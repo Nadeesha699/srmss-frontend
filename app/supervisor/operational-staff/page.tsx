@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import {
   FiActivity,
@@ -20,16 +21,7 @@ import {
 
 import SupervisorSidebar from "@/components/SideNavBar/SupervisorSidebar";
 
-const USER_API = "http://localhost:5000/api/users";
-const ASSIGNMENT_API = "http://localhost:5000/api/assignments";
-
-type StaffStatus =
-  | "ACTIVE"
-  | "AVAILABLE"
-  | "ON_DUTY"
-  | "OFF_DUTY"
-  | "INACTIVE"
-  | "SUSPENDED";
+const API = "http://localhost:5000/api";
 
 type Staff = {
   id: number;
@@ -37,23 +29,24 @@ type Staff = {
   email?: string;
   phone?: string;
   role: string;
-  status: StaffStatus | string;
-  depot_id?: number;
+  status: string;
+  depot_id?: number | string | null;
   depot_name?: string;
-  created_at?: string;
-  updated_at?: string;
 };
 
 type Assignment = {
   id: number;
   schedule_id: number;
   bus_id: number;
-  staff_id: number;
+  driver_id?: number;
+  staff_id?: number | string | null;
   assigned_by?: number;
-
   status?: string;
 
   schedule_code?: string;
+  schedule_date?: string;
+  departure_time?: string;
+  arrival_time?: string;
 
   route_code?: string;
   route_name?: string;
@@ -61,199 +54,294 @@ type Assignment = {
   end_point?: string;
 
   registration_no?: string;
-  bus?: string;
+  bus_status?: string;
+  depot_id?: number | string;
 
   staff_name?: string;
-
-  departure_time?: string;
-  arrival_time?: string;
+  staff_email?: string;
+  trip_status?: string;
 };
 
-const statusStyles: Record<string, string> = {
-  ACTIVE: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+function getArray<T>(response: any): T[] {
+  const payload = response?.data?.data ?? response?.data;
+  return Array.isArray(payload) ? payload : [];
+}
 
-  AVAILABLE: "bg-blue-50 text-blue-700 ring-blue-200",
+function normalizeStatus(status?: string) {
+  return String(status || "UNKNOWN").trim().toUpperCase();
+}
 
-  ON_DUTY: "bg-amber-50 text-amber-700 ring-amber-200",
-
-  OFF_DUTY: "bg-slate-100 text-slate-600 ring-slate-200",
-
-  INACTIVE: "bg-slate-100 text-slate-600 ring-slate-200",
-
-  SUSPENDED: "bg-red-50 text-red-700 ring-red-200",
-};
-
-const formatStatus = (status: string) => {
-  return status
+function formatStatus(status?: string) {
+  return normalizeStatus(status)
     .replaceAll("_", " ")
     .toLowerCase()
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
-};
+}
 
-const getRoute = (assignment: Assignment) => {
-  if (assignment.route_name) {
-    return assignment.route_name;
-  }
+function getRoute(assignment: Assignment) {
+  return (
+    assignment.route_name ||
+    (assignment.start_point && assignment.end_point
+      ? `${assignment.start_point} - ${assignment.end_point}`
+      : assignment.route_code || "Route not available")
+  );
+}
 
-  if (assignment.start_point && assignment.end_point) {
-    return `${assignment.start_point} - ${assignment.end_point}`;
-  }
+function getBus(assignment: Assignment) {
+  return assignment.registration_no || `Bus #${assignment.bus_id}`;
+}
 
-  return assignment.route_code || "-";
-};
-
-const getBus = (assignment: Assignment) => {
-  return assignment.registration_no || assignment.bus || "-";
-};
-
-const formatTime = (value?: string) => {
+function formatTime(value?: string) {
   if (!value) return "-";
 
-  const parts = value.split(":");
+  const match = value.match(/^(\d{1,2}):(\d{2})/);
+  if (!match) return value;
 
-  if (parts.length < 2) return value;
-
-  let hour = Number(parts[0]);
-  const minute = parts[1];
-
-  if (Number.isNaN(hour)) return value;
-
+  let hour = Number(match[1]);
+  const minute = match[2];
   const suffix = hour >= 12 ? "PM" : "AM";
 
   hour = hour % 12 || 12;
-
   return `${hour}:${minute} ${suffix}`;
-};
+}
+
+function getAssignmentStatus(assignment: Assignment) {
+  return normalizeStatus(assignment.trip_status || assignment.status);
+}
+
+function isActiveAssignment(assignment: Assignment) {
+  return ![
+    "CANCELLED",
+    "COMPLETED",
+    "ABORTED",
+    "REJECTED",
+  ].includes(getAssignmentStatus(assignment));
+}
+
+function getStatusClass(status?: string) {
+  switch (normalizeStatus(status)) {
+    case "ACTIVE":
+    case "AVAILABLE":
+    case "COMPLETED":
+      return "bg-emerald-50 text-emerald-700 ring-emerald-200";
+
+    case "ON_DUTY":
+    case "IN_PROGRESS":
+    case "RUNNING":
+      return "bg-blue-50 text-blue-700 ring-blue-200";
+
+    case "SCHEDULED":
+    case "ASSIGNED":
+    case "DELAYED":
+      return "bg-amber-50 text-amber-700 ring-amber-200";
+
+    case "INACTIVE":
+    case "CANCELLED":
+    case "ABORTED":
+    case "SUSPENDED":
+      return "bg-red-50 text-red-700 ring-red-200";
+
+    default:
+      return "bg-slate-100 text-slate-600 ring-slate-200";
+  }
+}
 
 export default function SupervisorOperationalStaffPage() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [depotId, setDepotId] = useState<number | null>(null);
 
   const [staff, setStaff] = useState<Staff[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
 
   const [search, setSearch] = useState("");
-
-  const [statusFilter, setStatusFilter] = useState<"ALL" | StaffStatus>("ALL");
-
+  const [statusFilter, setStatusFilter] = useState("ALL");
   const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-
   const [error, setError] = useState("");
 
-  const loadData = async (refresh = false) => {
+  // Read the currently logged-in supervisor's depot.
+  useEffect(() => {
     try {
-      if (refresh) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
+      const rawUser = localStorage.getItem("srmss_user");
+
+      if (!rawUser) {
+        setError("Please log in again.");
+        setLoading(false);
+        return;
       }
 
-      setError("");
+      const user = JSON.parse(rawUser);
+      const id = Number(user.depot_id);
 
-      const [staffResponse, assignmentResponse] = await Promise.all([
-        axios.get(USER_API, {
-          params: {
-            role: "OPERATIONAL_STAFF",
-          },
-        }),
-        axios.get(ASSIGNMENT_API),
-      ]);
+      if (!Number.isInteger(id) || id <= 0) {
+        setError("Your supervisor account has no valid depot assigned.");
+        setLoading(false);
+        return;
+      }
 
-      const staffData = staffResponse.data?.data;
-      const assignmentData = assignmentResponse.data?.data;
-
-      const staffRows = Array.isArray(staffData)
-        ? staffData
-        : Array.isArray(staffResponse.data)
-          ? staffResponse.data
-          : [];
-
-      const assignmentRows = Array.isArray(assignmentData)
-        ? assignmentData
-        : Array.isArray(assignmentResponse.data)
-          ? assignmentResponse.data
-          : [];
-
-      /*
-       * Safety filter in case the backend does not
-       * apply the role query parameter.
-       */
-      setStaff(
-        staffRows.filter((user: Staff) => user.role === "OPERATIONAL_STAFF"),
-      );
-
-      setAssignments(assignmentRows);
-    } catch (err) {
-      console.error("Failed to load operational staff:", err);
-
-      setError("Unable to load operational staff. Please check the API.");
-    } finally {
+      setDepotId(id);
+    } catch {
+      setError("Unable to read your account. Please log in again.");
       setLoading(false);
-      setRefreshing(false);
     }
-  };
-
-  useEffect(() => {
-    loadData();
   }, []);
 
-  /*
-   * Get active assignment for a staff member.
-   */
-  const getStaffAssignment = (staffId: number) => {
-    return assignments.find(
+  const loadData = useCallback(
+    async (refresh = false) => {
+      if (depotId === null) return;
+
+      try {
+        if (refresh) setRefreshing(true);
+        else setLoading(true);
+
+        setError("");
+
+        const token = localStorage.getItem("srmss_token");
+
+        const config = {
+          headers: token
+            ? { Authorization: `Bearer ${token}` }
+            : {},
+        };
+
+        const [staffResponse, assignmentResponse] = await Promise.all([
+          axios.get(`${API}/users`, {
+            ...config,
+            params: {
+              role: "OPERATIONAL_STAFF",
+              depot_id: depotId,
+            },
+          }),
+          axios.get(`${API}/assignments`, config),
+        ]);
+
+
+        const allStaff = getArray<Staff>(staffResponse);
+        const allAssignments = getArray<Assignment>(assignmentResponse);
+
+        // Restrict staff to the logged-in supervisor's depot.
+        const depotStaff = allStaff.filter(
+          (member) =>
+            normalizeStatus(member.role) === "OPERATIONAL_STAFF" &&
+            Number(member.depot_id) === depotId
+        );
+
+        const staffIds = new Set(
+          depotStaff.map((member) => Number(member.id))
+        );
+
+        // Keep active assignments, including IN_PROGRESS and DELAYED trips.
+        const depotAssignments = allAssignments.filter(
+          (assignment) =>
+            assignment.staff_id !== null &&
+            assignment.staff_id !== undefined &&
+            staffIds.has(Number(assignment.staff_id)) &&
+            isActiveAssignment(assignment) &&
+            (!assignment.depot_id ||
+              Number(assignment.depot_id) === depotId)
+        );
+
+        console.log(depotAssignments)
+
+        setStaff(depotStaff);
+        setAssignments(depotAssignments);
+
+        setSelectedStaff((current) => {
+          if (!current) return null;
+
+          return (
+            depotStaff.find(
+              (member) => Number(member.id) === Number(current.id)
+            ) || null
+          );
+        });
+      } catch (err: any) {
+        console.error("Failed to load operational staff:", err);
+
+        setError(
+          err?.response?.data?.message ||
+            "Unable to load operational staff. Check your users and assignments APIs."
+        );
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [depotId]
+  );
+
+  useEffect(() => {
+    if (depotId !== null) {
+      loadData();
+    }
+  }, [depotId, loadData]);
+
+  const getStaffAssignments = (staffId: number) =>
+    assignments.filter(
       (assignment) =>
-        assignment.staff_id === staffId &&
-        assignment.status !== "CANCELLED" &&
-        assignment.status !== "COMPLETED",
+        Number(assignment.staff_id) === Number(staffId) &&
+        isActiveAssignment(assignment)
     );
-  };
 
   const filteredStaff = useMemo(() => {
-    const value = search.toLowerCase().trim();
+    const query = search.trim().toLowerCase();
 
     return staff.filter((member) => {
       const matchesSearch =
-        !value ||
-        member.name.toLowerCase().includes(value) ||
-        (member.email || "").toLowerCase().includes(value) ||
-        (member.phone || "").toLowerCase().includes(value) ||
-        (member.depot_name || "").toLowerCase().includes(value);
+        !query ||
+        String(member.name || "").toLowerCase().includes(query) ||
+        String(member.email || "").toLowerCase().includes(query) ||
+        String(member.phone || "").toLowerCase().includes(query) ||
+        String(member.depot_name || "").toLowerCase().includes(query);
 
       const matchesStatus =
-        statusFilter === "ALL" || member.status === statusFilter;
+        statusFilter === "ALL" ||
+        normalizeStatus(member.status) === statusFilter;
 
       return matchesSearch && matchesStatus;
     });
   }, [staff, search, statusFilter]);
 
-  const totalStaff = staff.length;
-
-  const availableStaff = staff.filter(
-    (member) => member.status === "AVAILABLE" || member.status === "ACTIVE",
-  ).length;
-
-  const onDutyStaff = staff.filter(
-    (member) => member.status === "ON_DUTY",
+  const activeStaff = staff.filter(
+    (member) => normalizeStatus(member.status) === "ACTIVE"
   ).length;
 
   const inactiveStaff = staff.filter(
-    (member) =>
-      member.status === "OFF_DUTY" ||
-      member.status === "INACTIVE" ||
-      member.status === "SUSPENDED",
+    (member) => normalizeStatus(member.status) === "INACTIVE"
   ).length;
 
-  const getAssignedCount = (staffId: number) => {
-    return assignments.filter(
-      (assignment) =>
-        assignment.staff_id === staffId &&
-        assignment.status !== "CANCELLED" &&
-        assignment.status !== "COMPLETED",
-    ).length;
-  };
+  const onDutyAssignments = assignments.filter((assignment) =>
+    ["IN_PROGRESS", "RUNNING"].includes(getAssignmentStatus(assignment))
+  ).length;
+
+  const statCards = [
+    {
+      label: "Total Staff",
+      value: staff.length,
+      icon: FiUser,
+      color: "bg-red-50 text-red-600",
+    },
+    {
+      label: "Active Staff",
+      value: activeStaff,
+      icon: FiCheckCircle,
+      color: "bg-emerald-50 text-emerald-600",
+    },
+    {
+      label: "Inactive Staff",
+      value: inactiveStaff,
+      icon: FiClock,
+      color: "bg-amber-50 text-amber-600",
+    },
+    {
+      label: "Active Assignments",
+      value: assignments.length,
+      icon: FiTruck,
+      color: "bg-blue-50 text-blue-600",
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -263,11 +351,10 @@ export default function SupervisorOperationalStaffPage() {
       />
 
       <main className="min-h-screen lg:pl-72">
-        {/* Header */}
         <header className="sticky top-0 z-30 flex h-16 items-center border-b border-slate-200 bg-white/95 px-4 backdrop-blur md:px-6">
           <button
             onClick={() => setMobileOpen(true)}
-            className="mr-4 rounded-lg p-2 text-slate-600 transition hover:bg-slate-100 lg:hidden"
+            className="mr-4 rounded-lg p-2 text-slate-600 hover:bg-slate-100 lg:hidden"
             aria-label="Open menu"
           >
             <FiMenu size={22} />
@@ -277,7 +364,6 @@ export default function SupervisorOperationalStaffPage() {
             <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
               Supervisor
             </p>
-
             <p className="font-semibold text-slate-800">
               SRMSS Management Portal
             </p>
@@ -285,35 +371,28 @@ export default function SupervisorOperationalStaffPage() {
         </header>
 
         <div className="p-4 sm:p-6 lg:p-8">
-          {/* Page Header */}
           <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setMobileOpen(true)}
-                className="rounded-xl border border-slate-200 bg-white p-2 text-slate-600 shadow-sm lg:hidden"
-              >
-                <FiMenu size={21} />
-              </button>
-
-              <div>
-                <p className="text-sm font-medium text-red-600">
-                  Supervisor Workspace
+            <div>
+              <p className="text-sm font-medium text-red-600">
+                Supervisor Workspace
+              </p>
+              <h1 className="mt-1 text-3xl font-bold text-slate-900">
+                Operational Staff
+              </h1>
+              <p className="mt-1 text-sm text-slate-500">
+                View staff and their current assignments in your depot.
+              </p>
+              {depotId !== null && (
+                <p className="mt-2 text-xs font-medium text-slate-400">
+                  Depot ID: {depotId}
                 </p>
-
-                <h1 className="text-3xl font-bold text-slate-900">
-                  Operational Staff
-                </h1>
-
-                <p className="mt-1 text-sm text-slate-500">
-                  Monitor operational staff and their current assignments.
-                </p>
-              </div>
+              )}
             </div>
 
             <button
               onClick={() => loadData(true)}
-              disabled={refreshing}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={refreshing || depotId === null}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-60"
             >
               <FiRefreshCw
                 size={17}
@@ -323,34 +402,23 @@ export default function SupervisorOperationalStaffPage() {
             </button>
           </div>
 
-          {/* Statistics */}
+          {error && (
+            <div className="mb-6 flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <FiAlertCircle size={18} />
+              <span>{error}</span>
+              {depotId !== null && (
+                <button
+                  onClick={() => loadData(true)}
+                  className="ml-auto font-semibold underline"
+                >
+                  Retry
+                </button>
+              )}
+            </div>
+          )}
+
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {[
-              {
-                label: "Total Staff",
-                value: totalStaff,
-                icon: FiUser,
-                style: "bg-red-50 text-red-600",
-              },
-              {
-                label: "Available",
-                value: availableStaff,
-                icon: FiCheckCircle,
-                style: "bg-emerald-50 text-emerald-600",
-              },
-              {
-                label: "On Duty",
-                value: onDutyStaff,
-                icon: FiActivity,
-                style: "bg-amber-50 text-amber-600",
-              },
-              {
-                label: "Inactive",
-                value: inactiveStaff,
-                icon: FiAlertCircle,
-                style: "bg-slate-100 text-slate-600",
-              },
-            ].map((stat) => {
+            {statCards.map((stat) => {
               const Icon = stat.icon;
 
               return (
@@ -361,14 +429,12 @@ export default function SupervisorOperationalStaffPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-slate-500">{stat.label}</p>
-
                       <p className="mt-2 text-2xl font-bold text-slate-900">
                         {stat.value}
                       </p>
                     </div>
-
                     <div
-                      className={`flex h-11 w-11 items-center justify-center rounded-xl ${stat.style}`}
+                      className={`flex h-11 w-11 items-center justify-center rounded-xl ${stat.color}`}
                     >
                       <Icon size={21} />
                     </div>
@@ -378,23 +444,6 @@ export default function SupervisorOperationalStaffPage() {
             })}
           </div>
 
-          {/* Error */}
-          {error && (
-            <div className="mt-6 flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              <FiAlertCircle size={18} />
-
-              <span>{error}</span>
-
-              <button
-                onClick={() => loadData()}
-                className="ml-auto font-semibold underline"
-              >
-                Retry
-              </button>
-            </div>
-          )}
-
-          {/* Filters */}
           <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex flex-col gap-3 lg:flex-row">
               <div className="relative flex-1">
@@ -402,63 +451,44 @@ export default function SupervisorOperationalStaffPage() {
                   className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
                   size={18}
                 />
-
                 <input
                   value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search name, email, phone or depot..."
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm outline-none transition focus:border-red-500 focus:bg-white focus:ring-4 focus:ring-red-100"
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search staff by name, email, phone or depot..."
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm outline-none focus:border-red-500 focus:bg-white focus:ring-4 focus:ring-red-100"
                 />
               </div>
 
               <select
                 value={statusFilter}
-                onChange={(e) =>
-                  setStatusFilter(e.target.value as "ALL" | StaffStatus)
-                }
+                onChange={(event) => setStatusFilter(event.target.value)}
                 className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 outline-none focus:border-red-500 focus:ring-4 focus:ring-red-100"
               >
-                <option value="ALL">All Status</option>
-
+                <option value="ALL">All Staff Statuses</option>
                 <option value="ACTIVE">Active</option>
-
-                <option value="AVAILABLE">Available</option>
-
-                <option value="ON_DUTY">On Duty</option>
-
-                <option value="OFF_DUTY">Off Duty</option>
-
                 <option value="INACTIVE">Inactive</option>
-
-                <option value="SUSPENDED">Suspended</option>
               </select>
             </div>
           </div>
 
-          {/* Staff List */}
           <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div className="border-b border-slate-200 px-5 py-4">
-              <h2 className="font-bold text-slate-900">Operational Staff</h2>
-
+              <h2 className="font-bold text-slate-900">
+                Depot Operational Staff
+              </h2>
               <p className="mt-1 text-sm text-slate-500">
-                Staff available for operational assignments.
+                Staff members, status, and active assignments.
               </p>
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[950px]">
+              <table className="w-full min-w-[900px]">
                 <thead className="bg-slate-50">
                   <tr className="text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
                     <th className="px-5 py-4">Staff</th>
-
                     <th className="px-5 py-4">Contact</th>
-
-                    <th className="px-5 py-4">Depot</th>
-
-                    <th className="px-5 py-4">Current Assignment</th>
-
-                    <th className="px-5 py-4">Status</th>
-
+                    <th className="px-5 py-4">Assignment</th>
+                    <th className="px-5 py-4">Staff Status</th>
                     <th className="px-5 py-4">Action</th>
                   </tr>
                 </thead>
@@ -466,12 +496,11 @@ export default function SupervisorOperationalStaffPage() {
                 <tbody className="divide-y divide-slate-100">
                   {loading ? (
                     <tr>
-                      <td colSpan={6} className="px-6 py-16 text-center">
+                      <td colSpan={5} className="px-6 py-16 text-center">
                         <FiRefreshCw
                           size={28}
                           className="mx-auto animate-spin text-red-500"
                         />
-
                         <p className="mt-3 font-semibold text-slate-700">
                           Loading operational staff...
                         </p>
@@ -479,71 +508,49 @@ export default function SupervisorOperationalStaffPage() {
                     </tr>
                   ) : (
                     filteredStaff.map((member) => {
-                      const assignment = getStaffAssignment(member.id);
-
-                      const assignedCount = getAssignedCount(member.id);
+                      const staffAssignments = getStaffAssignments(member.id);
+                      const assignment = staffAssignments[0];
 
                       return (
                         <tr
                           key={member.id}
                           className="transition hover:bg-slate-50"
                         >
-                          {/* Staff */}
                           <td className="px-5 py-4">
                             <div className="flex items-center gap-3">
-                              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-50 font-bold text-red-600">
-                                {member.name.charAt(0).toUpperCase()}
+                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-50 font-bold text-red-600">
+                                {String(member.name || "?")
+                                  .charAt(0)
+                                  .toUpperCase()}
                               </div>
-
                               <div>
                                 <p className="font-semibold text-slate-900">
                                   {member.name}
                                 </p>
-
                                 <p className="text-xs text-slate-500">
                                   Staff ID: {member.id}
                                 </p>
+                                {member.depot_name && (
+                                  <p className="mt-1 flex items-center gap-1 text-xs text-slate-400">
+                                    <FiMapPin size={12} />
+                                    {member.depot_name}
+                                  </p>
+                                )}
                               </div>
                             </div>
                           </td>
 
-                          {/* Contact */}
                           <td className="px-5 py-4">
-                            <div className="space-y-1">
-                              {member.email && (
-                                <div className="flex items-center gap-2 text-sm text-slate-600">
-                                  <FiMail
-                                    size={14}
-                                    className="text-slate-400"
-                                  />
-
-                                  {member.email}
-                                </div>
-                              )}
-
-                              {member.phone && (
-                                <div className="flex items-center gap-2 text-sm text-slate-600">
-                                  <FiPhone
-                                    size={14}
-                                    className="text-slate-400"
-                                  />
-
-                                  {member.phone}
-                                </div>
-                              )}
-                            </div>
+                            <p className="flex items-center gap-2 text-sm text-slate-600">
+                              <FiMail className="shrink-0 text-slate-400" />
+                              {member.email || "-"}
+                            </p>
+                            <p className="mt-1 flex items-center gap-2 text-sm text-slate-600">
+                              <FiPhone className="shrink-0 text-slate-400" />
+                              {member.phone || "-"}
+                            </p>
                           </td>
 
-                          {/* Depot */}
-                          <td className="px-5 py-4">
-                            <div className="flex items-center gap-2 text-sm text-slate-600">
-                              <FiMapPin className="text-slate-400" />
-
-                              {member.depot_name || "Assigned Depot"}
-                            </div>
-                          </td>
-
-                          {/* Assignment */}
                           <td className="px-5 py-4">
                             {assignment ? (
                               <div>
@@ -551,59 +558,48 @@ export default function SupervisorOperationalStaffPage() {
                                   {assignment.schedule_code ||
                                     `Schedule #${assignment.schedule_id}`}
                                 </p>
-
                                 <p className="mt-1 text-xs text-slate-500">
                                   {getRoute(assignment)}
                                 </p>
-
-                                <div className="mt-1 flex items-center gap-2 text-xs text-slate-500">
+                                <p className="mt-1 flex items-center gap-2 text-xs text-slate-500">
                                   <FiTruck size={13} />
-
                                   {getBus(assignment)}
-                                </div>
-                              </div>
-                            ) : (
-                              <div>
-                                <p className="font-medium text-slate-500">
-                                  No active assignment
                                 </p>
-
-                                {assignedCount > 0 && (
-                                  <p className="mt-1 text-xs text-slate-400">
-                                    {assignedCount} active assignment
-                                    {assignedCount !== 1 ? "s" : ""}
+                                <span
+                                  className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${getStatusClass(
+                                    getAssignmentStatus(assignment)
+                                  )}`}
+                                >
+                                  {formatStatus(getAssignmentStatus(assignment))}
+                                </span>
+                                {staffAssignments.length > 1 && (
+                                  <p className="mt-1 text-xs text-blue-600">
+                                    +{staffAssignments.length - 1} more active
+                                    assignments
                                   </p>
                                 )}
                               </div>
+                            ) : (
+                              <span className="text-sm text-slate-400">
+                                No active assignment
+                              </span>
                             )}
                           </td>
 
-                          {/* Status */}
                           <td className="px-5 py-4">
                             <span
-                              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ring-1 ${
-                                statusStyles[member.status] ||
-                                "bg-slate-100 text-slate-600 ring-slate-200"
-                              }`}
+                              className={`inline-flex rounded-full px-3 py-1.5 text-xs font-semibold ring-1 ${getStatusClass(
+                                member.status
+                              )}`}
                             >
-                              {member.status === "ON_DUTY" ? (
-                                <FiActivity size={13} />
-                              ) : member.status === "AVAILABLE" ||
-                                member.status === "ACTIVE" ? (
-                                <FiCheckCircle size={13} />
-                              ) : (
-                                <FiClock size={13} />
-                              )}
-
                               {formatStatus(member.status)}
                             </span>
                           </td>
 
-                          {/* Action */}
                           <td className="px-5 py-4">
                             <button
                               onClick={() => setSelectedStaff(member)}
-                              className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+                              className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:border-red-200 hover:bg-red-50 hover:text-red-600"
                             >
                               View Details
                             </button>
@@ -619,13 +615,11 @@ export default function SupervisorOperationalStaffPage() {
             {!loading && filteredStaff.length === 0 && (
               <div className="px-6 py-14 text-center">
                 <FiSearch className="mx-auto text-slate-300" size={32} />
-
                 <p className="mt-3 font-semibold text-slate-700">
                   No operational staff found
                 </p>
-
                 <p className="mt-1 text-sm text-slate-500">
-                  Try changing your search or status filter.
+                  Check your depot assignment or change the search filters.
                 </p>
               </div>
             )}
@@ -641,7 +635,10 @@ export default function SupervisorOperationalStaffPage() {
                   <span className="font-semibold text-slate-700">
                     {staff.length}
                   </span>{" "}
-                  operational staff
+                  staff members in this depot.
+                </p>
+                <p className="mt-1 text-xs text-slate-400">
+                  In-progress assignments: {onDutyAssignments}
                 </p>
               </div>
             )}
@@ -649,7 +646,6 @@ export default function SupervisorOperationalStaffPage() {
         </div>
       </main>
 
-      {/* Staff Details Modal */}
       {selectedStaff && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
           <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white shadow-2xl">
@@ -658,155 +654,153 @@ export default function SupervisorOperationalStaffPage() {
                 <p className="text-xs font-semibold uppercase tracking-wider text-red-600">
                   Operational Staff
                 </p>
-
                 <h2 className="mt-1 text-xl font-bold text-slate-900">
                   {selectedStaff.name}
                 </h2>
               </div>
-
               <button
                 onClick={() => setSelectedStaff(null)}
                 className="rounded-lg p-2 text-slate-400 hover:bg-slate-100"
+                aria-label="Close details"
               >
                 <FiX size={20} />
               </button>
             </div>
 
             <div className="space-y-4 p-6">
-              {/* Profile */}
               <div className="flex items-center gap-4 rounded-xl bg-slate-50 p-4">
                 <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-100 text-xl font-bold text-red-600">
-                  {selectedStaff.name.charAt(0).toUpperCase()}
+                  {String(selectedStaff.name || "?")
+                    .charAt(0)
+                    .toUpperCase()}
                 </div>
-
                 <div>
                   <p className="font-bold text-slate-900">
                     {selectedStaff.name}
                   </p>
-
-                  <p className="text-sm text-slate-500">Operational Staff</p>
-
-                  <p className="mt-1 text-xs text-slate-400">
-                    Staff ID: {selectedStaff.id}
+                  <p className="text-sm text-slate-500">
+                    Operational Staff · ID {selectedStaff.id}
                   </p>
                 </div>
               </div>
 
-              {/* Status */}
-              <div className="flex items-center justify-between rounded-xl border border-slate-200 p-4">
-                <div>
-                  <p className="text-xs text-slate-500">Current Status</p>
-
-                  <p className="mt-1 font-semibold text-slate-800">
-                    {formatStatus(selectedStaff.status)}
-                  </p>
-                </div>
-
-                <span
-                  className={`rounded-full px-3 py-1.5 text-xs font-semibold ring-1 ${
-                    statusStyles[selectedStaff.status] ||
-                    "bg-slate-100 text-slate-600 ring-slate-200"
-                  }`}
-                >
-                  {formatStatus(selectedStaff.status)}
-                </span>
-              </div>
-
-              {/* Contact */}
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-xl border border-slate-200 p-4">
                   <div className="flex items-center gap-2 text-slate-400">
                     <FiMail size={16} />
-
                     <span className="text-xs">Email</span>
                   </div>
-
                   <p className="mt-2 break-all text-sm font-medium text-slate-700">
                     {selectedStaff.email || "Not available"}
                   </p>
                 </div>
-
                 <div className="rounded-xl border border-slate-200 p-4">
                   <div className="flex items-center gap-2 text-slate-400">
                     <FiPhone size={16} />
-
                     <span className="text-xs">Phone</span>
                   </div>
-
                   <p className="mt-2 text-sm font-medium text-slate-700">
                     {selectedStaff.phone || "Not available"}
                   </p>
                 </div>
               </div>
 
-              {/* Depot */}
               <div className="rounded-xl border border-slate-200 p-4">
                 <div className="flex items-center gap-2 text-slate-400">
                   <FiMapPin size={16} />
-
                   <span className="text-xs">Depot</span>
                 </div>
-
                 <p className="mt-2 text-sm font-semibold text-slate-700">
-                  {selectedStaff.depot_name || "Assigned Depot"}
+                  {selectedStaff.depot_name || `Depot #${depotId}`}
                 </p>
               </div>
 
-              {/* Current assignment */}
-              {(() => {
-                const assignment = getStaffAssignment(selectedStaff.id);
+              <div className="rounded-xl border border-slate-200 p-4">
+                <p className="text-xs text-slate-500">Staff Status</p>
+                <span
+                  className={`mt-2 inline-flex rounded-full px-3 py-1.5 text-xs font-semibold ring-1 ${getStatusClass(
+                    selectedStaff.status
+                  )}`}
+                >
+                  {formatStatus(selectedStaff.status)}
+                </span>
+              </div>
 
-                if (!assignment) {
-                  return (
-                    <div className="rounded-xl border border-dashed border-slate-300 p-4 text-center">
-                      <FiTruck className="mx-auto text-slate-300" size={25} />
+              <div>
+                <h3 className="mb-3 font-semibold text-slate-900">
+                  Active Assignments
+                </h3>
 
-                      <p className="mt-2 text-sm font-semibold text-slate-600">
-                        No active assignment
-                      </p>
-
-                      <p className="mt-1 text-xs text-slate-400">
-                        This staff member is currently not assigned to a trip.
-                      </p>
-                    </div>
-                  );
-                }
-
-                return (
-                  <div className="rounded-xl border border-red-100 bg-red-50 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-red-500">
-                      Current Assignment
+                {getStaffAssignments(selectedStaff.id).length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-slate-300 p-5 text-center">
+                    <FiTruck className="mx-auto text-slate-300" size={25} />
+                    <p className="mt-2 text-sm text-slate-600">
+                      No active assignments
                     </p>
-
-                    <p className="mt-2 font-bold text-slate-900">
-                      {assignment.schedule_code ||
-                        `Schedule #${assignment.schedule_id}`}
-                    </p>
-
-                    <p className="mt-1 text-sm text-slate-600">
-                      {getRoute(assignment)}
-                    </p>
-
-                    <div className="mt-3 grid grid-cols-2 gap-3">
-                      <div className="rounded-lg bg-white p-3">
-                        <p className="text-xs text-slate-400">Bus</p>
-
-                        <p className="mt-1 text-sm font-semibold text-slate-700">
-                          {getBus(assignment)}
-                        </p>
-                      </div>
-
-                      <div className="rounded-lg bg-white p-3">
-                        <p className="text-xs text-slate-400">Departure</p>
-
-                        <p className="mt-1 text-sm font-semibold text-slate-700">
-                          {formatTime(assignment.departure_time)}
-                        </p>
-                      </div>
-                    </div>
                   </div>
-                );
-              })()}
+                ) : (
+                  <div className="space-y-3">
+                    {getStaffAssignments(selectedStaff.id).map(
+                      (assignment) => (
+                        <div
+                          key={assignment.id}
+                          className="rounded-xl border border-red-100 bg-red-50 p-4"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="font-bold text-slate-900">
+                                {assignment.schedule_code ||
+                                  `Schedule #${assignment.schedule_id}`}
+                              </p>
+                              <p className="mt-1 text-sm text-slate-600">
+                                {getRoute(assignment)}
+                              </p>
+                            </div>
+                            <span
+                              className={`rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${getStatusClass(
+                                getAssignmentStatus(assignment)
+                              )}`}
+                            >
+                              {formatStatus(getAssignmentStatus(assignment))}
+                            </span>
+                          </div>
+
+                          <div className="mt-3 grid grid-cols-2 gap-3">
+                            <div className="rounded-lg bg-white p-3">
+                              <p className="text-xs text-slate-400">Bus</p>
+                              <p className="mt-1 text-sm font-semibold text-slate-700">
+                                {getBus(assignment)}
+                              </p>
+                            </div>
+                            <div className="rounded-lg bg-white p-3">
+                              <p className="text-xs text-slate-400">
+                                Departure
+                              </p>
+                              <p className="mt-1 text-sm font-semibold text-slate-700">
+                                {formatTime(assignment.departure_time)}
+                              </p>
+                            </div>
+                            <div className="rounded-lg bg-white p-3">
+                              <p className="text-xs text-slate-400">Arrival</p>
+                              <p className="mt-1 text-sm font-semibold text-slate-700">
+                                {formatTime(assignment.arrival_time)}
+                              </p>
+                            </div>
+                            <div className="rounded-lg bg-white p-3">
+                              <p className="text-xs text-slate-400">
+                                Assignment ID
+                              </p>
+                              <p className="mt-1 text-sm font-semibold text-slate-700">
+                                #{assignment.id}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="flex justify-end border-t border-slate-200 px-6 py-4">

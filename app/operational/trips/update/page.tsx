@@ -72,7 +72,6 @@ type Delay = {
   trip_id?: number;
   delay_minutes?: number;
   reason?: string;
-  description?: string;
   notes?: string;
   reported_by?: number;
   created_at?: string;
@@ -406,7 +405,7 @@ export default function TripUpdatesPage() {
         trip_id: selectedTrip.id,
         delay_minutes: delayMinutes,
         reason: delayForm.reason,
-        description: delayForm.description.trim() || null,
+        notes: delayForm.description.trim() || null,
         reported_by: user.id,
       });
 
@@ -740,9 +739,9 @@ export default function TripUpdatesPage() {
                               <p className="mt-1 text-sm text-slate-500">
                                 {delay.reason || "Delay reported"}
                               </p>
-                              {(delay.description || delay.notes) && (
+                              {( delay.notes) && (
                                 <p className="mt-1 text-xs text-slate-400">
-                                  {delay.description || delay.notes}
+                                  { delay.notes}
                                 </p>
                               )}
                             </div>

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
+import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import {
   FiAlertCircle,
@@ -25,11 +25,7 @@ import { AdminSidebar } from "@/components/SideNavBar/AdminSideNavBar";
 
 const API_URL = "http://localhost:5000/api";
 
-type DriverStatus =
-  | "AVAILABLE"
-  | "ON_DUTY"
-  | "OFF_DUTY"
-  | "SUSPENDED";
+type DriverStatus = "AVAILABLE" | "ON_DUTY" | "OFF_DUTY" | "SUSPENDED";
 
 type Driver = {
   id: number;
@@ -90,15 +86,43 @@ function getErrorMessage(error: unknown, fallback: string) {
 }
 
 function getDateValue(value?: string | null) {
-  if (!value) return "";
+  return value ? value.slice(0, 10) : "";
+}
 
-  // Handles both ISO dates and MySQL DATE values.
-  return value.slice(0, 10);
+function formatDate(value?: string | null) {
+  const date = getDateValue(value);
+  if (!date) return "Not provided";
+
+  const parsed = new Date(`${date}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return date;
+
+  return parsed.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function getExpiryState(value?: string | null) {
+  const date = getDateValue(value);
+  if (!date) return "UNKNOWN";
+
+  const expiry = new Date(`${date}T00:00:00`);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  if (Number.isNaN(expiry.getTime())) return "UNKNOWN";
+  if (expiry < today) return "EXPIRED";
+
+  const days = Math.ceil(
+    (expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
+  );
+
+  return days <= 30 ? "EXPIRING" : "VALID";
 }
 
 export default function DriversPage() {
   const [mobileOpen, setMobileOpen] = useState(false);
-
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [depots, setDepots] = useState<Depot[]>([]);
 
@@ -106,6 +130,7 @@ export default function DriversPage() {
   const [loadingDepots, setLoadingDepots] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [statusUpdatingId, setStatusUpdatingId] = useState<number | null>(null);
 
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
@@ -115,16 +140,20 @@ export default function DriversPage() {
   const [editingDriver, setEditingDriver] = useState<Driver | null>(null);
   const [form, setForm] = useState<DriverForm>({ ...emptyForm });
 
-  /* =========================
-     FETCH DRIVERS
-  ========================= */
+  const getHeaders = useCallback(() => {
+    const token = localStorage.getItem("srmss_token");
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }, []);
 
-  const fetchDrivers = async () => {
+  const fetchDrivers = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
 
-      const response = await axios.get(`${API_URL}/drivers`);
+      const response = await axios.get(`${API_URL}/drivers`, {
+        headers: getHeaders(),
+      });
+
       const data = response.data?.data ?? response.data;
 
       if (!Array.isArray(data)) {
@@ -138,17 +167,16 @@ export default function DriversPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [getHeaders]);
 
-  /* =========================
-     FETCH DEPOTS
-  ========================= */
-
-  const fetchDepots = async () => {
+  const fetchDepots = useCallback(async () => {
     try {
       setLoadingDepots(true);
 
-      const response = await axios.get(`${API_URL}/depots`);
+      const response = await axios.get(`${API_URL}/depots`, {
+        headers: getHeaders(),
+      });
+
       const data = response.data?.data ?? response.data;
 
       if (!Array.isArray(data)) {
@@ -158,20 +186,16 @@ export default function DriversPage() {
       setDepots(data);
     } catch (err) {
       console.error("Fetch depots error:", err);
-      alert(getErrorMessage(err, "Failed to load depots."));
+      setError(getErrorMessage(err, "Failed to load depots."));
     } finally {
       setLoadingDepots(false);
     }
-  };
+  }, [getHeaders]);
 
   useEffect(() => {
     void fetchDrivers();
     void fetchDepots();
-  }, []);
-
-  /* =========================
-     FILTER DRIVERS
-  ========================= */
+  }, [fetchDrivers, fetchDepots]);
 
   const filteredDrivers = useMemo(() => {
     const query = search.toLowerCase().trim();
@@ -194,12 +218,6 @@ export default function DriversPage() {
     });
   }, [drivers, search, statusFilter]);
 
-  /* =========================
-     STATISTICS
-  ========================= */
-
-  const totalDrivers = drivers.length;
-
   const availableDrivers = drivers.filter(
     (driver) => driver.status?.toUpperCase() === "AVAILABLE",
   ).length;
@@ -212,23 +230,13 @@ export default function DriversPage() {
     (driver) => driver.status?.toUpperCase() === "SUSPENDED",
   ).length;
 
-  /* =========================
-     OPEN CREATE MODAL
-  ========================= */
-
   const openCreateModal = () => {
     setEditingDriver(null);
     setForm({ ...emptyForm });
     setShowModal(true);
 
-    if (depots.length === 0) {
-      void fetchDepots();
-    }
+    if (depots.length === 0) void fetchDepots();
   };
-
-  /* =========================
-     OPEN EDIT MODAL
-  ========================= */
 
   const openEditModal = (driver: Driver) => {
     setEditingDriver(driver);
@@ -246,8 +254,7 @@ export default function DriversPage() {
           ? String(driver.depot_id)
           : "",
       working_hours:
-        driver.working_hours !== null &&
-        driver.working_hours !== undefined
+        driver.working_hours !== null && driver.working_hours !== undefined
           ? String(driver.working_hours)
           : "0",
       status:
@@ -260,9 +267,7 @@ export default function DriversPage() {
 
     setShowModal(true);
 
-    if (depots.length === 0) {
-      void fetchDepots();
-    }
+    if (depots.length === 0) void fetchDepots();
   };
 
   const closeModal = () => {
@@ -272,10 +277,6 @@ export default function DriversPage() {
     setEditingDriver(null);
     setForm({ ...emptyForm });
   };
-
-  /* =========================
-     CREATE / UPDATE DRIVER
-  ========================= */
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -335,15 +336,14 @@ export default function DriversPage() {
       setSaving(true);
 
       if (editingDriver) {
-        await axios.put(
-          `${API_URL}/drivers/${editingDriver.id}`,
-          payload,
-        );
-
+        await axios.put(`${API_URL}/drivers/${editingDriver.id}`, payload, {
+          headers: getHeaders(),
+        });
         alert("Driver updated successfully.");
       } else {
-        await axios.post(`${API_URL}/drivers`, payload);
-
+        await axios.post(`${API_URL}/drivers`, payload, {
+          headers: getHeaders(),
+        });
         alert("Driver created successfully.");
       }
 
@@ -360,10 +360,6 @@ export default function DriversPage() {
     }
   };
 
-  /* =========================
-     DELETE DRIVER
-  ========================= */
-
   const handleDelete = async (driver: Driver) => {
     const confirmed = window.confirm(
       `Are you sure you want to delete driver ${driver.name} (${driver.employee_no})?`,
@@ -374,7 +370,9 @@ export default function DriversPage() {
     try {
       setDeletingId(driver.id);
 
-      await axios.delete(`${API_URL}/drivers/${driver.id}`);
+      await axios.delete(`${API_URL}/drivers/${driver.id}`, {
+        headers: getHeaders(),
+      });
 
       setDrivers((current) =>
         current.filter((item) => item.id !== driver.id),
@@ -394,18 +392,20 @@ export default function DriversPage() {
     }
   };
 
-  /* =========================
-     UPDATE DRIVER STATUS
-  ========================= */
-
   const handleStatusChange = async (
     driver: Driver,
     status: DriverStatus,
   ) => {
+    if (driver.status?.toUpperCase() === status) return;
+
     try {
-      await axios.patch(`${API_URL}/drivers/${driver.id}/status`, {
-        status,
-      });
+      setStatusUpdatingId(driver.id);
+
+      await axios.patch(
+        `${API_URL}/drivers/${driver.id}/status`,
+        { status },
+        { headers: getHeaders() },
+      );
 
       setDrivers((current) =>
         current.map((item) =>
@@ -415,12 +415,10 @@ export default function DriversPage() {
     } catch (err) {
       console.error("Update driver status error:", err);
       alert(getErrorMessage(err, "Failed to update driver status."));
+    } finally {
+      setStatusUpdatingId(null);
     }
   };
-
-  /* =========================
-     RENDER
-  ========================= */
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -491,7 +489,10 @@ export default function DriversPage() {
 
                 <button
                   type="button"
-                  onClick={() => void fetchDrivers()}
+                  onClick={() => {
+                    void fetchDrivers();
+                    void fetchDepots();
+                  }}
                   className="shrink-0 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
                 >
                   Retry
@@ -502,7 +503,7 @@ export default function DriversPage() {
             <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <StatCard
                 title="Total Drivers"
-                value={totalDrivers}
+                value={drivers.length}
                 icon={<FiTruck />}
               />
               <StatCard
@@ -542,6 +543,7 @@ export default function DriversPage() {
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
                   className="rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-red-500 focus:ring-4 focus:ring-red-50"
+                  aria-label="Filter by driver status"
                 >
                   <option value="ALL">All Statuses</option>
                   <option value="AVAILABLE">Available</option>
@@ -611,6 +613,7 @@ export default function DriversPage() {
                     key={driver.id}
                     driver={driver}
                     deleting={deletingId === driver.id}
+                    statusUpdating={statusUpdatingId === driver.id}
                     onEdit={() => openEditModal(driver)}
                     onDelete={() => void handleDelete(driver)}
                     onStatusChange={(status) =>
@@ -623,8 +626,6 @@ export default function DriversPage() {
           </div>
         </main>
       </div>
-
-      {/* DRIVER MODAL */}
 
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4">
@@ -733,8 +734,7 @@ export default function DriversPage() {
                       .filter(
                         (depot) =>
                           depot.status?.toUpperCase() === "ACTIVE" ||
-                          (editingDriver &&
-                            depot.id === editingDriver.depot_id),
+                          (editingDriver && depot.id === editingDriver.depot_id),
                       )
                       .map((depot) => (
                         <option key={depot.id} value={depot.id}>
@@ -836,19 +836,17 @@ export default function DriversPage() {
   );
 }
 
-/* =========================
-   DRIVER CARD
-========================= */
-
 function DriverCard({
   driver,
   deleting,
+  statusUpdating,
   onEdit,
   onDelete,
   onStatusChange,
 }: {
   driver: Driver;
   deleting: boolean;
+  statusUpdating: boolean;
   onEdit: () => void;
   onDelete: () => void;
   onStatusChange: (status: DriverStatus) => void;
@@ -863,6 +861,17 @@ function DriverCard({
         : status === "SUSPENDED"
           ? "bg-red-50 text-red-700"
           : "bg-slate-100 text-slate-600";
+
+  const expiryState = getExpiryState(driver.license_expiry);
+
+  const expiryClass =
+    expiryState === "EXPIRED"
+      ? "text-red-600"
+      : expiryState === "EXPIRING"
+        ? "text-amber-600"
+        : expiryState === "VALID"
+          ? "text-emerald-700"
+          : "text-slate-500";
 
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:border-red-100 hover:shadow-md">
@@ -914,16 +923,24 @@ function DriverCard({
 
       <div className="grid gap-5 p-5 sm:grid-cols-2">
         <InfoItem icon={<FiPhone />} label="Phone" value={driver.phone || "Not provided"} />
-        <InfoItem icon={<FiCreditCard />} label="Licence Number" value={driver.license_no} />
+        <InfoItem icon={<FiCreditCard />} label="Licence Number" value={driver.license_no || "Not provided"} />
         <InfoItem
           icon={<FiCalendar />}
           label="Licence Expiry"
-          value={getDateValue(driver.license_expiry) || "Not provided"}
+          value={formatDate(driver.license_expiry)}
+          valueClass={expiryClass}
+          hint={
+            expiryState === "EXPIRED"
+              ? "Expired"
+              : expiryState === "EXPIRING"
+                ? "Expires within 30 days"
+                : undefined
+          }
         />
         <InfoItem
           icon={<FiMapPin />}
           label="Assigned Depot"
-          value={driver.depot_name || "No depot assigned"}
+          value={driver.depot_name || driver.depot_code || "No depot assigned"}
         />
         <InfoItem
           icon={<FiClock />}
@@ -949,7 +966,8 @@ function DriverCard({
               : "AVAILABLE"
           }
           onChange={(e) => onStatusChange(e.target.value as DriverStatus)}
-          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 outline-none focus:border-red-500"
+          disabled={statusUpdating}
+          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 outline-none focus:border-red-500 disabled:opacity-50"
           aria-label={`Change status for ${driver.name}`}
         >
           <option value="AVAILABLE">Available</option>
@@ -962,27 +980,30 @@ function DriverCard({
   );
 }
 
-/* =========================
-   SHARED COMPONENTS
-========================= */
-
 function InfoItem({
   icon,
   label,
   value,
+  valueClass = "text-slate-800",
+  hint,
 }: {
   icon: ReactNode;
   label: string;
   value: string;
+  valueClass?: string;
+  hint?: string;
 }) {
   return (
     <div className="flex items-start gap-3">
       <div className="mt-0.5 shrink-0 text-slate-400">{icon}</div>
       <div className="min-w-0">
         <p className="text-xs text-slate-500">{label}</p>
-        <p className="mt-1 break-words text-sm font-semibold text-slate-800">
+        <p className={`mt-1 break-words text-sm font-semibold ${valueClass}`}>
           {value || "-"}
         </p>
+        {hint && (
+          <p className="mt-1 text-xs font-medium text-amber-600">{hint}</p>
+        )}
       </div>
     </div>
   );
