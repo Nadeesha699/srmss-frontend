@@ -263,41 +263,7 @@ export default function LandingPage() {
     }
   };
 
-  /* =========================================================
-     PERFORMANCE LABEL
-  ========================================================= */
 
-  const getPerformanceLabel = () => {
-    if (loading) {
-      return "Loading";
-    }
-
-    if (dashboard.performance >= 90) {
-      return "Excellent";
-    }
-
-    if (dashboard.performance >= 70) {
-      return "Good";
-    }
-
-    if (dashboard.performance > 0) {
-      return "Needs Attention";
-    }
-
-    return "No Data";
-  };
-
-  const getPerformanceClass = () => {
-    if (dashboard.performance >= 90) {
-      return "text-green-400";
-    }
-
-    if (dashboard.performance >= 70) {
-      return "text-yellow-400";
-    }
-
-    return "text-red-400";
-  };
 
   return (
     <main className="min-h-screen bg-white text-slate-900">
@@ -396,7 +362,7 @@ export default function LandingPage() {
 
         <div className="absolute -bottom-40 -left-40 h-[450px] w-[450px] rounded-full bg-slate-100 blur-3xl" />
 
-        <div className="relative mx-auto grid max-w-7xl items-center gap-14 px-5 py-20 sm:px-6 lg:grid-cols-2 lg:px-8 lg:py-28">
+        <div className="relative mx-auto grid max-w-7xl items-start gap-14 px-5 py-20 sm:px-6 lg:grid-cols-2 lg:px-8 lg:py-28">
           {/* Hero Content */}
 
           <div>
@@ -461,7 +427,7 @@ export default function LandingPage() {
                     </p>
 
                     <h3 className="mt-1 text-lg font-bold text-white">
-                      Depot Overview
+                      Overview
                     </h3>
                   </div>
 
@@ -504,42 +470,6 @@ export default function LandingPage() {
                   />
                 </div>
 
-                {/* Performance */}
-
-                <div className="mx-5 mb-5 rounded-2xl border border-white/10 bg-white/5 p-5">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs text-slate-400">
-                        Operational Performance
-                      </p>
-
-                      <p className="mt-1 text-xl font-bold text-white">
-                        {loading ? "..." : `${dashboard.performance}%`}
-                      </p>
-                    </div>
-
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-500/10">
-                      <FiBarChart2 className="text-green-400" />
-                    </div>
-                  </div>
-
-                  <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">
-                    <div
-                      className="h-full rounded-full bg-red-500 transition-all duration-700"
-                      style={{
-                        width: `${dashboard.performance}%`,
-                      }}
-                    />
-                  </div>
-
-                  <div className="mt-3 flex justify-between text-[11px] text-slate-500">
-                    <span>{dashboard.completedTrips} completed today</span>
-
-                    <span className={getPerformanceClass()}>
-                      {getPerformanceLabel()}
-                    </span>
-                  </div>
-                </div>
 
                 {/* Live Status */}
 
@@ -992,10 +922,6 @@ function Feature({
 
       <p className="mt-2 text-sm leading-6 text-slate-500">{description}</p>
 
-      <div className="mt-5 flex items-center gap-1 text-xs font-bold text-red-600 opacity-0 transition group-hover:opacity-100">
-        Learn more
-        <FiArrowRight />
-      </div>
     </div>
   );
 }
