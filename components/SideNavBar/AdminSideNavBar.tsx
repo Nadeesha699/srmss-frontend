@@ -103,10 +103,11 @@ export function AdminSidebar({ mobileOpen, onClose }: AdminSidebarProps) {
             onClick={onClose}
             className="flex items-center gap-3"
           >
-            {/* Logo Box */}
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-600 font-bold text-white shadow-lg shadow-red-950/30">
-              S
-            </div>
+              <img
+            src="/logo-red.png"
+            alt="SRMSS Logo"
+            className="h-10 w-10 rounded-xl object-contain"
+          />
 
             {/* Logo Text */}
             <div>

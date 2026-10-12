@@ -24,7 +24,6 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [rememberMe, setRememberMe] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -40,19 +39,6 @@ export default function LoginPage() {
 
       const data = response.data;
 
-      /*
-       * Expected backend response:
-       *
-       * {
-       *   token: "...",
-       *   user: {
-       *     id: 1,
-       *     name: "John",
-       *     email: "john@srmss.com",
-       *     role: "ADMIN"
-       *   }
-       * }
-       */
 
       const token = data.token;
       const user = data.user;
@@ -94,7 +80,7 @@ export default function LoginPage() {
           localStorage.removeItem("srmss_token");
       }
     } catch (err: any) {
-      console.error("Login error:", err);
+      console.log("Login error:", err);
 
       if (err.response) {
         setError(
@@ -129,9 +115,11 @@ export default function LoginPage() {
             href="/"
             className="relative z-10 flex w-fit items-center gap-3 text-white"
           >
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-red-600 text-lg font-black shadow-lg shadow-red-950">
-              S
-            </div>
+            <img
+            src="/logo-red.png"
+            alt="SRMSS Logo"
+            className="h-12 w-12 rounded-xl object-contain"
+          />
 
             <div>
               <p className="text-lg font-black tracking-tight">
@@ -207,9 +195,11 @@ export default function LoginPage() {
             <div className="rounded-3xl border border-slate-200 bg-white p-7 shadow-xl shadow-slate-200/60 sm:p-9">
               {/* Header */}
               <div className="mb-8">
-                <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-red-50 text-2xl font-black text-red-600">
-                  S
-                </div>
+                <img
+            src="/logo-red.png"
+            alt="SRMSS Logo"
+            className="h-14 w-14 mb-5 rounded-xl object-contain"
+          />
 
                 <p className="text-sm font-bold uppercase tracking-wider text-red-600">
                   SRMSS SYSTEM
@@ -301,35 +291,12 @@ export default function LoginPage() {
                       }
                     >
                       {showPassword ? (
-                        <FiEyeOff />
-                      ) : (
                         <FiEye />
+                      ) : (
+                        <FiEyeOff />
                       )}
                     </button>
                   </div>
-                </div>
-
-                {/* Options */}
-                <div className="flex items-center justify-between text-sm">
-                  <label className="flex cursor-pointer items-center gap-2 text-slate-500">
-                    <input
-                      type="checkbox"
-                      checked={rememberMe}
-                      onChange={(e) =>
-                        setRememberMe(e.target.checked)
-                      }
-                      className="rounded border-slate-300 text-red-600 focus:ring-red-500"
-                    />
-
-                    Remember me
-                  </label>
-
-                  <button
-                    type="button"
-                    className="font-bold text-red-600 transition hover:text-red-700"
-                  >
-                    Forgot password?
-                  </button>
                 </div>
 
                 {/* Submit */}

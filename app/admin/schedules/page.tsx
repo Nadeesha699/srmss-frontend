@@ -1,4 +1,3 @@
-
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
@@ -19,6 +18,8 @@ import {
   FiX,
   FiCheckCircle,
   FiAlertCircle,
+  FiActivity,
+  FiTruck,
 } from "react-icons/fi";
 
 import { AdminSidebar } from "@/components/SideNavBar/AdminSideNavBar";
@@ -28,7 +29,13 @@ const SCHEDULE_API = `${API}/schedules`;
 const ROUTE_API = `${API}/routes`;
 const DEPOT_API = `${API}/depots`;
 
-type ScheduleStatus = "SCHEDULED" | "CANCELLED";
+type ScheduleStatus =
+  | "SCHEDULED"
+  | "ASSIGNED"
+  | "IN_PROGRESS"
+  | "COMPLETED"
+  | "DELAYED"
+  | "CANCELLED";
 
 type Route = {
   id: number;
@@ -100,14 +107,14 @@ function getArray<T>(response: any): T[] {
 
 function getErrorMessage(error: any, fallback: string) {
   return (
-    error?.response?.data?.message ||
-    error?.response?.data?.error ||
-    fallback
+    error?.response?.data?.message || error?.response?.data?.error || fallback
   );
 }
 
 function getRouteName(route: Route) {
-  return route.name || route.route_name || route.route_code || `Route ${route.id}`;
+  return (
+    route.name || route.route_name || route.route_code || `Route ${route.id}`
+  );
 }
 
 function formatDate(date: string) {
@@ -185,8 +192,8 @@ export default function AdminSchedulesPage() {
       setError(
         getErrorMessage(
           err,
-          "Unable to load schedules. Check that the backend APIs are running."
-        )
+          "Unable to load schedules. Check that the backend APIs are running.",
+        ),
       );
     } finally {
       setLoading(false);
@@ -262,7 +269,11 @@ export default function AdminSchedulesPage() {
     return {
       total: schedules.length,
       scheduled: schedules.filter((item) => item.status === "SCHEDULED").length,
-      cancelled: schedules.filter((item) => item.status === "CANCELLED").length,
+      assigned: schedules.filter((item) => item.status === "ASSIGNED").length,
+      in_progress: schedules.filter((item) => item.status === "IN_PROGRESS")
+        .length,
+      completed: schedules.filter((item) => item.status === "COMPLETED").length,
+      delayed: schedules.filter((item) => item.status === "DELAYED").length,
     };
   }, [schedules]);
 
@@ -274,7 +285,7 @@ export default function AdminSchedulesPage() {
     setForm({
       ...emptyForm,
       schedule_code: `SCH-${new Date().getFullYear()}-${String(
-        schedules.length + 1
+        schedules.length + 1,
       ).padStart(3, "0")}`,
       schedule_date: getLocalDate(),
     });
@@ -335,7 +346,7 @@ export default function AdminSchedulesPage() {
 
     if (form.arrival_time <= form.departure_time) {
       setError(
-        "Arrival time must be later than departure time. Overnight schedules need separate date handling."
+        "Arrival time must be later than departure time. Overnight schedules need separate date handling.",
       );
       return;
     }
@@ -344,7 +355,7 @@ export default function AdminSchedulesPage() {
       (item) =>
         item.schedule_code.toLowerCase() ===
           form.schedule_code.trim().toLowerCase() &&
-        item.id !== editingSchedule?.id
+        item.id !== editingSchedule?.id,
     );
 
     if (duplicateCode) {
@@ -361,8 +372,6 @@ export default function AdminSchedulesPage() {
       arrival_time: form.arrival_time,
       status: form.status,
     };
-
-    console.log(payload)
 
     setSaving(true);
 
@@ -386,46 +395,17 @@ export default function AdminSchedulesPage() {
           err,
           editingSchedule
             ? "Unable to update the schedule."
-            : "Unable to create the schedule."
-        )
+            : "Unable to create the schedule.",
+        ),
       );
     } finally {
       setSaving(false);
     }
   };
 
-  const handleCancelSchedule = async (schedule: Schedule) => {
-    if (schedule.status === "CANCELLED") return;
-
-    const confirmed = window.confirm(
-      `Cancel schedule ${schedule.schedule_code}? Check that it has no active assignment or trip first.`
-    );
-
-    if (!confirmed) return;
-
-    setError("");
-    setNotice("");
-
-    try {
-      await axios.patch(`${SCHEDULE_API}/${schedule.id}/status`, {
-        status: "CANCELLED",
-      });
-
-      setNotice(`${schedule.schedule_code} has been cancelled.`);
-      await loadData();
-    } catch (err) {
-      setError(
-        getErrorMessage(
-          err,
-          "Unable to cancel this schedule. Check whether it has an assignment or trip."
-        )
-      );
-    }
-  };
-
   const handleDeleteSchedule = async (schedule: Schedule) => {
     const confirmed = window.confirm(
-      `Delete ${schedule.schedule_code}? Only delete schedules that have no assignment or trip history.`
+      `Delete ${schedule.schedule_code}? Only delete schedules that have no assignment or trip history.`,
     );
 
     if (!confirmed) return;
@@ -441,16 +421,35 @@ export default function AdminSchedulesPage() {
       setError(
         getErrorMessage(
           err,
-          "Unable to delete this schedule. It may have assignment or trip records."
-        )
+          "Unable to delete this schedule. It may have assignment or trip records.",
+        ),
       );
     }
   };
 
   const statusClass = (status: ScheduleStatus) => {
-    return status === "SCHEDULED"
-      ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
-      : "bg-red-50 text-red-700 ring-1 ring-red-200";
+    switch (status) {
+      case "SCHEDULED":
+        return "bg-blue-50 text-blue-700 ring-1 ring-blue-200";
+
+      case "ASSIGNED":
+        return "bg-purple-50 text-purple-700 ring-1 ring-purple-200";
+
+      case "IN_PROGRESS":
+        return "bg-amber-50 text-amber-700 ring-1 ring-amber-200";
+
+      case "COMPLETED":
+        return "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200";
+
+      case "DELAYED":
+        return "bg-orange-50 text-orange-700 ring-1 ring-orange-200";
+
+      case "CANCELLED":
+        return "bg-red-50 text-red-700 ring-1 ring-red-200";
+
+      default:
+        return "bg-gray-50 text-gray-700 ring-1 ring-gray-200";
+    }
   };
 
   return (
@@ -541,16 +540,41 @@ export default function AdminSchedulesPage() {
             <StatCard
               title="Scheduled"
               value={stats.scheduled}
+              icon={<FiCalendar />}
+              description="Schedules awaiting assignment"
+              iconClass="bg-blue-100 text-blue-700"
+            />
+
+            <StatCard
+              title="Assigned"
+              value={stats.assigned}
+              icon={<FiTruck />}
+              description="Schedules with bus and driver assigned"
+              iconClass="bg-purple-100 text-purple-700"
+            />
+
+            <StatCard
+              title="In Progress"
+              value={stats.in_progress}
+              icon={<FiActivity />}
+              description="Trips currently in progress"
+              iconClass="bg-amber-100 text-amber-700"
+            />
+
+            <StatCard
+              title="Completed"
+              value={stats.completed}
               icon={<FiCheckCircle />}
-              description="Available for assignment"
+              description="Successfully completed trips"
               iconClass="bg-emerald-100 text-emerald-700"
             />
+
             <StatCard
-              title="Cancelled"
-              value={stats.cancelled}
-              icon={<FiX />}
-              description="Cancelled services"
-              iconClass="bg-red-100 text-red-700"
+              title="Delayed"
+              value={stats.delayed}
+              icon={<FiClock />}
+              description="Schedules with reported delays"
+              iconClass="bg-orange-100 text-orange-700"
             />
           </section>
 
@@ -599,6 +623,10 @@ export default function AdminSchedulesPage() {
                 >
                   <option value="ALL">All statuses</option>
                   <option value="SCHEDULED">Scheduled</option>
+                  <option value="ASSIGNED">Assigned</option>
+                  <option value="IN_PROGRESS">In Progress</option>
+                  <option value="COMPLETED">Completed</option>
+                  <option value="DELAYED">Delayed</option>
                   <option value="CANCELLED">Cancelled</option>
                 </select>
               </div>
@@ -655,17 +683,20 @@ export default function AdminSchedulesPage() {
                         colSpan={7}
                         className="px-5 py-14 text-center text-slate-500"
                       >
-                        <FiRefreshCw className="mx-auto mb-3 animate-spin" size={22} />
+                        <FiRefreshCw
+                          className="mx-auto mb-3 animate-spin"
+                          size={22}
+                        />
                         Loading schedules...
                       </td>
                     </tr>
                   ) : filteredSchedules.length === 0 ? (
                     <tr>
-                      <td
-                        colSpan={7}
-                        className="px-5 py-14 text-center"
-                      >
-                        <FiCalendar className="mx-auto mb-3 text-slate-300" size={30} />
+                      <td colSpan={7} className="px-5 py-14 text-center">
+                        <FiCalendar
+                          className="mx-auto mb-3 text-slate-300"
+                          size={30}
+                        />
                         <p className="font-semibold text-slate-700">
                           No schedules found
                         </p>
@@ -694,7 +725,9 @@ export default function AdminSchedulesPage() {
                               {getScheduleRoute(schedule)}
                             </p>
                             <p className="mt-1 text-xs text-slate-500">
-                              {route?.start_point || schedule.start_point || "—"}
+                              {route?.start_point ||
+                                schedule.start_point ||
+                                "—"}
                               {" → "}
                               {route?.end_point || schedule.end_point || "—"}
                             </p>
@@ -723,7 +756,7 @@ export default function AdminSchedulesPage() {
                           <td className="px-5 py-4">
                             <span
                               className={`inline-flex rounded-full px-3 py-1.5 text-xs font-bold ${statusClass(
-                                schedule.status
+                                schedule.status,
                               )}`}
                             >
                               {schedule.status}
@@ -742,20 +775,12 @@ export default function AdminSchedulesPage() {
                                 <FiEye />
                               </ActionButton>
 
-                              <ActionButton
-                                label="Edit schedule"
-                                onClick={() => openEditModal(schedule)}
-                              >
-                                <FiEdit2 />
-                              </ActionButton>
-
                               {schedule.status === "SCHEDULED" && (
                                 <ActionButton
-                                  label="Cancel schedule"
-                                  onClick={() => handleCancelSchedule(schedule)}
-                                  danger
+                                  label="Edit schedule"
+                                  onClick={() => openEditModal(schedule)}
                                 >
-                                  <FiX />
+                                  <FiEdit2 />
                                 </ActionButton>
                               )}
 
@@ -874,8 +899,8 @@ export default function AdminSchedulesPage() {
                         (route) =>
                           !route.status ||
                           ["ACTIVE", "AVAILABLE"].includes(
-                            route.status.toUpperCase()
-                          )
+                            route.status.toUpperCase(),
+                          ),
                       )
                       .map((route) => (
                         <option key={route.id} value={route.id}>
@@ -907,8 +932,8 @@ export default function AdminSchedulesPage() {
                         (depot) =>
                           !depot.status ||
                           ["ACTIVE", "AVAILABLE"].includes(
-                            depot.status.toUpperCase()
-                          )
+                            depot.status.toUpperCase(),
+                          ),
                       )
                       .map((depot) => (
                         <option key={depot.id} value={depot.id}>
@@ -949,7 +974,7 @@ export default function AdminSchedulesPage() {
                   />
                 </FormField>
 
-                <FormField label="Status" required>
+                {/* <FormField label="Status" required>
                   <select
                     required
                     value={form.status}
@@ -962,9 +987,13 @@ export default function AdminSchedulesPage() {
                     className="form-control"
                   >
                     <option value="SCHEDULED">Scheduled</option>
+                    <option value="ASSIGNED">Assigned</option>
+                    <option value="IN_PROGRESS">In Progress</option>
+                    <option value="COMPLETED">Completed</option>
+                    <option value="DELAYED">Delayed</option>
                     <option value="CANCELLED">Cancelled</option>
                   </select>
-                </FormField>
+                </FormField> */}
               </div>
 
               <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm leading-6 text-blue-900">
@@ -984,7 +1013,9 @@ export default function AdminSchedulesPage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={saving || routes.length === 0 || depots.length === 0}
+                  disabled={
+                    saving || routes.length === 0 || depots.length === 0
+                  }
                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-3 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {saving ? (
@@ -995,8 +1026,8 @@ export default function AdminSchedulesPage() {
                   {saving
                     ? "Saving..."
                     : editingSchedule
-                    ? "Save Changes"
-                    : "Create Schedule"}
+                      ? "Save Changes"
+                      : "Create Schedule"}
                 </button>
               </div>
             </form>
@@ -1031,7 +1062,7 @@ export default function AdminSchedulesPage() {
                 <span className="text-sm text-slate-500">Current status</span>
                 <span
                   className={`rounded-full px-3 py-1.5 text-xs font-bold ${statusClass(
-                    viewingSchedule.status
+                    viewingSchedule.status,
                   )}`}
                 >
                   {viewingSchedule.status}
@@ -1065,8 +1096,8 @@ export default function AdminSchedulesPage() {
               />
 
               <div className="rounded-xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">
-                Bus, driver and Operational Staff assignments are managed by
-                the Depot Supervisor in the Assignments module.
+                Bus, driver and Operational Staff assignments are managed by the
+                Depot Supervisor in the Assignments module.
               </div>
 
               <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">

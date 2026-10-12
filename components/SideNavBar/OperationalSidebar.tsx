@@ -98,9 +98,11 @@ export default function OperationalSidebar({
             onClick={onClose}
             className="flex items-center gap-3"
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-600 text-lg font-bold text-white shadow-lg shadow-red-950/30">
-              O
-            </div>
+             <img
+            src="/logo-red.png"
+            alt="SRMSS Logo"
+            className="h-10 w-10 rounded-xl object-contain"
+          />
 
             <div>
               <p className="font-bold tracking-wide text-white">SRMSS</p>

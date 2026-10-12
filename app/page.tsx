@@ -19,11 +19,10 @@ import {
   FiZap,
   FiAlertCircle,
   FiRefreshCw,
+  FiX,
+  FiMenu,
 } from "react-icons/fi";
-
-/* =========================================================
-   API CONFIGURATION
-========================================================= */
+import Image from "next/image";
 
 const API_BASE = "http://localhost:5000/api";
 
@@ -99,6 +98,7 @@ export default function LandingPage() {
 
   const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     loadDashboardData();
@@ -178,7 +178,6 @@ export default function LandingPage() {
           ? tripsResult.value.data?.data || []
           : [];
 
-      console.log(buses);
 
       /* -------------------------------------------------------
          ACTIVE BUSES
@@ -271,62 +270,122 @@ export default function LandingPage() {
           NAVIGATION
       ========================================================= */}
 
-      <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-5 sm:px-6 lg:px-8">
-          {/* Logo */}
+    <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/95 backdrop-blur">
+      <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-5 sm:px-6 lg:px-8">
 
-          <Link href="/" className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-red-600 text-lg font-black text-white shadow-lg shadow-red-100">
-              S
-            </div>
+        {/* Logo */}
+        <Link
+          href="/"
+          className="flex items-center gap-3"
+          onClick={() => setMobileMenuOpen(false)}
+        >
+          <img
+            src="/logo-red.png"
+            alt="SRMSS Logo"
+            className="h-11 w-11 rounded-xl object-contain"
+          />
 
-            <div>
-              <h1 className="text-lg font-extrabold tracking-tight text-slate-950">
-                SRMSS
-              </h1>
+          <div>
+            <h1 className="text-lg font-extrabold tracking-tight text-slate-950">
+              SRMSS
+            </h1>
 
-              <p className="hidden text-[11px] font-medium text-slate-500 sm:block">
-                Smart Route Management & Scheduling
-              </p>
-            </div>
-          </Link>
+            <p className="hidden text-[11px] font-medium text-slate-500 sm:block">
+              Smart Route Management & Scheduling
+            </p>
+          </div>
+        </Link>
 
-          {/* Navigation */}
-
-          <nav className="hidden items-center gap-8 md:flex">
+        {/* Desktop Navigation */}
+        <nav className="hidden items-center gap-8 md:flex">
+      
             <a
               href="#features"
               className="text-sm font-medium text-slate-600 transition hover:text-red-600"
             >
               Features
             </a>
-
             <a
               href="#roles"
               className="text-sm font-medium text-slate-600 transition hover:text-red-600"
             >
               Roles
             </a>
-
             <a
               href="#benefits"
               className="text-sm font-medium text-slate-600 transition hover:text-red-600"
             >
               Benefits
             </a>
-          </nav>
+        </nav>
 
-          {/* Login */}
+        {/* Desktop Login */}
+        <Link
+          href="/login"
+          className="hidden items-center gap-2 rounded-xl bg-red-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-red-100 transition hover:bg-red-700 md:inline-flex"
+        >
+          Login
+          <FiArrowRight />
+        </Link>
 
+        {/* Mobile Actions */}
+        <div className="flex items-center gap-2 md:hidden">
           <Link
             href="/login"
-            className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-red-100 transition hover:bg-red-700"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-red-100 transition hover:bg-red-700"
           >
             Login
-            <FiArrowRight />
+            <FiArrowRight size={16} />
           </Link>
+
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label={
+              mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"
+            }
+            aria-expanded={mobileMenuOpen}
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-700 transition hover:bg-slate-100"
+          >
+            {mobileMenuOpen ? (
+              <FiX size={22} />
+            ) : (
+              <FiMenu size={22} />
+            )}
+          </button>
         </div>
-      </header>
+      </div>
+
+      {/* Mobile Navigation Dropdown */}
+      {mobileMenuOpen && (
+        <nav className="border-t border-slate-200/80 bg-white px-5 py-4 shadow-lg md:hidden">
+          <div className="mx-auto flex max-w-7xl flex-col gap-1">
+           
+              <a
+                href="#features"
+                onClick={() => setMobileMenuOpen(false)}
+                className="rounded-xl px-4 py-3 text-sm font-semibold text-slate-600 transition hover:bg-red-50 hover:text-red-600"
+              >
+                 Features
+              </a>
+               <a
+                href="#roles"
+                onClick={() => setMobileMenuOpen(false)}
+                className="rounded-xl px-4 py-3 text-sm font-semibold text-slate-600 transition hover:bg-red-50 hover:text-red-600"
+              >
+                 Roles
+              </a>
+               <a
+                href="#benefits"
+                onClick={() => setMobileMenuOpen(false)}
+                className="rounded-xl px-4 py-3 text-sm font-semibold text-slate-600 transition hover:bg-red-50 hover:text-red-600"
+              >
+                 Benefits
+              </a>
+          </div>
+        </nav>
+      )}
+    </header>
 
       {/* =========================================================
           API ERROR
@@ -775,9 +834,7 @@ export default function LandingPage() {
         <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-600 font-black text-white">
-                S
-              </div>
+             <img src="/logo-white.png" className="h-10 w-10 rounded-xl"/>
 
               <div>
                 <p className="font-bold text-white">SRMSS</p>
@@ -809,7 +866,7 @@ export default function LandingPage() {
 
           <div className="mt-8 border-t border-slate-800 pt-6">
             <p className="text-center text-xs text-slate-600">
-              © 2026 SRMSS — Smart Route Management and Scheduling System
+              © 2026 SRMSS Smart Route Management and Scheduling System
             </p>
           </div>
         </div>
@@ -948,7 +1005,7 @@ function RoleStep({
           {icon}
         </div>
 
-        <span className="text-5xl font-black text-slate-100">{number}</span>
+        <span className="text-5xl font-black text-gray-400">{number}</span>
       </div>
 
       <h3 className="mt-7 text-xl font-bold text-slate-900">{title}</h3>
