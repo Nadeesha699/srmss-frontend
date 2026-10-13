@@ -7,7 +7,6 @@ import {
   FiArrowLeft,
   FiEdit2,
   FiMail,
-  FiPhone,
   FiShield,
   FiUser,
   FiSave,
@@ -21,6 +20,7 @@ import {
   FiAlertCircle,
   FiEye,
   FiEyeOff,
+  FiMapPin,
 } from "react-icons/fi";
 
 const API_BASE = "http://localhost:5000/api";
@@ -30,7 +30,6 @@ type UserProfile = {
   id: number;
   name: string;
   email: string;
-  phone?: string;
   role: string;
   status: string;
   depot_id?: number | null;
@@ -45,6 +44,13 @@ type StoredUser = {
   role?: string;
 };
 
+type Depot = {
+  id: number;
+  name: string;
+  depot_code?: string;
+  location?: string;
+};
+
 export default function OperationalStaffProfilePage() {
   const router = useRouter();
 
@@ -52,9 +58,9 @@ export default function OperationalStaffProfilePage() {
   const [form, setForm] = useState({
     name: "",
     email: "",
-    phone: "",
   });
-
+  const [depot, setDepot] = useState<Depot | null>(null);
+  const [depotLoading, setDepotLoading] = useState(false);
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -113,11 +119,10 @@ export default function OperationalStaffProfilePage() {
       }
 
       setProfile(user);
-
+fetchDepot(Number(user.depot_id));
       setForm({
         name: user.name || "",
         email: user.email || "",
-        phone: user.phone || "",
       });
     } catch (err: any) {
       console.error("Failed to load profile:", err);
@@ -131,6 +136,38 @@ export default function OperationalStaffProfilePage() {
   useEffect(() => {
     loadProfile();
   }, []);
+
+  
+  const fetchDepot = async (id: number) => {
+    const assignedDepotId = Number(id);
+
+    if (Number.isFinite(assignedDepotId) && assignedDepotId > 0) {
+      setDepotLoading(true);
+
+      try {
+        const depotResponse = await axios.get(
+          `http://localhost:5000/api/depots/${assignedDepotId}`,
+        );
+
+        const result = depotResponse.data?.data ?? depotResponse.data;
+        const depotData = result?.depot ?? result;
+
+        setDepot({
+          id: Number(depotData.id ?? assignedDepotId),
+          name: depotData.name || "Depot name unavailable",
+          depot_code: depotData.depot_code,
+          location: depotData.location,
+        });
+      } catch (err) {
+        console.error("Depot loading error:", err);
+        setDepot(null);
+      } finally {
+        setDepotLoading(false);
+      }
+    } else {
+      setDepot(null);
+    }
+  };
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
@@ -159,17 +196,15 @@ export default function OperationalStaffProfilePage() {
       setError("");
       setSuccess("");
 
-      const response = await axios.put(`${USER_API}/${profile.id}`, {
+      const response = await axios.put(`${USER_API}/profile/${profile.id}`, {
         name: form.name.trim(),
         email: form.email.trim(),
-        phone: form.phone.trim() || null,
       });
 
       const updatedUser: UserProfile = response.data?.data || {
         ...profile,
         name: form.name.trim(),
         email: form.email.trim(),
-        phone: form.phone.trim(),
       };
 
       setProfile(updatedUser);
@@ -177,7 +212,6 @@ export default function OperationalStaffProfilePage() {
       setForm({
         name: updatedUser.name || "",
         email: updatedUser.email || "",
-        phone: updatedUser.phone || "",
       });
 
       /*
@@ -224,7 +258,6 @@ export default function OperationalStaffProfilePage() {
     setForm({
       name: profile.name || "",
       email: profile.email || "",
-      phone: profile.phone || "",
     });
 
     setEditing(false);
@@ -416,7 +449,50 @@ export default function OperationalStaffProfilePage() {
       </header>
 
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        {/* Error */}
+           <section className="mb-6 overflow-hidden rounded-2xl border border-red-100 bg-white shadow-sm">
+                  <div className="flex flex-col gap-4 bg-gradient-to-r from-red-700 to-red-600 p-5 text-white sm:flex-row sm:items-center sm:justify-between sm:p-6">
+                    <div className="flex items-start gap-4">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/15">
+                        <FiMapPin size={24} />
+                      </div>
+        
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-red-100">
+                          Depot Operations
+                        </p>
+        
+                        <h2 className="mt-1 text-xl font-bold sm:text-2xl">
+                          {depotLoading
+                            ? "Loading depot..."
+                            : depot?.name || "No depot assigned"}
+                        </h2>
+        
+                        {depot?.location && (
+                          <p className="mt-1 flex items-center gap-1.5 text-sm text-red-100">
+                            <FiMapPin size={14} />
+                            {depot.location}
+                          </p>
+                        )}
+        
+                        {depot?.depot_code && (
+                          <p className="mt-1 text-sm text-red-100">
+                            Depot Code: {depot.depot_code}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+        
+                    <div className="rounded-xl border border-white/20 bg-white/10 px-5 py-3">
+                      <p className="text-xs font-medium text-red-100">Depot ID</p>
+        
+                      <p className="mt-1 text-2xl font-bold">
+                        {depot?.id ?? profile.depot_id ?? "Not assigned"}
+                      </p>
+                    </div>
+                  </div>
+        
+                  
+                </section>
         {error && (
           <div className="mb-6 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             <FiAlertCircle className="mt-0.5 shrink-0" />
@@ -808,17 +884,6 @@ export default function OperationalStaffProfilePage() {
                 }
               />
 
-              <div className="rounded-xl bg-slate-50 p-4">
-                <p className="text-xs font-medium text-slate-500">
-                  Password requirements
-                </p>
-
-                <ul className="mt-2 space-y-1 text-xs text-slate-500">
-                  <li>• Minimum 8 characters</li>
-                  <li>• New passwords must match</li>
-                </ul>
-              </div>
-
               <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                 <button
                   type="button"
@@ -842,8 +907,7 @@ export default function OperationalStaffProfilePage() {
                     </>
                   ) : (
                     <>
-                      <FiLock size={17} />
-                      Update Password
+                      Change Password
                     </>
                   )}
                 </button>
@@ -1058,7 +1122,7 @@ function PasswordField({
           onClick={onToggle}
           className="shrink-0 text-slate-400 transition hover:text-slate-700"
         >
-          {show ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+          {!show ? <FiEyeOff size={18} /> : <FiEye size={18} />}
         </button>
       </div>
     </div>

@@ -17,6 +17,7 @@ import {
 } from "react-icons/fi";
 
 import SupervisorSidebar from "@/components/SideNavBar/SupervisorSidebar";
+import { toast, ToastContainer } from "react-toastify";
 
 const API = "http://localhost:5000/api";
 const DELAY_API = `${API}/delays`;
@@ -297,26 +298,26 @@ export default function SupervisorDelaysPage() {
 
   const saveDelay = async () => {
     if (!form.trip_id) {
-      alert("Please select a trip.");
+      toast.error("Please select a trip.");
       return;
     }
 
     const minutes = Number(form.delay_minutes);
 
     if (!Number.isInteger(minutes) || minutes <= 0) {
-      alert("Delay minutes must be a positive whole number.");
+      toast.error("Delay minutes must be a positive whole number.");
       return;
     }
 
     if (!form.reason) {
-      alert("Please select a delay reason.");
+      toast.error("Please select a delay reason.");
       return;
     }
 
     const selectedTrip = trips.find((trip) => trip.id === Number(form.trip_id));
 
     if (!selectedTrip || Number(selectedTrip.depot_id) !== depotId) {
-      alert("Select a valid trip from your depot.");
+      toast.error("Select a valid trip from your depot.");
       return;
     }
 
@@ -346,7 +347,7 @@ export default function SupervisorDelaysPage() {
       await loadData(true);
     } catch (err: any) {
       console.error("Failed to save delay:", err);
-      alert(err?.response?.data?.message || "Failed to save delay report.");
+      toast.error(err?.response?.data?.message || "Failed to save delay report.");
     } finally {
       setSaving(false);
     }
@@ -370,7 +371,7 @@ export default function SupervisorDelaysPage() {
       );
     } catch (err: any) {
       console.error("Failed to update delay status:", err);
-      alert(err?.response?.data?.message || "Failed to update delay status.");
+      toast.error(err?.response?.data?.message || "Failed to update delay status.");
     } finally {
       setUpdatingStatusId(null);
     }
@@ -765,6 +766,7 @@ export default function SupervisorDelaysPage() {
               </button>
             </div>
           </div>
+          <ToastContainer/>
         </div>
       )}
     </div>

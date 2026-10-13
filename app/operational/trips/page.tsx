@@ -517,7 +517,7 @@ export default function AssignedTripsPage() {
                   />
                 </div>
 
-                <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="mt-6 text-gray-600 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                     <div className="relative w-full lg:max-w-md">
                       <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -797,7 +797,7 @@ export default function AssignedTripsPage() {
                   )}
                 </div>
 
-                <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                {/* <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                   <div className="flex items-start gap-4">
                     <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600">
                       <FiActivity size={20} />
@@ -819,7 +819,7 @@ export default function AssignedTripsPage() {
                       </div>
                     </div>
                   </div>
-                </div>
+                </div> */}
               </>
             )}
           </div>
@@ -865,7 +865,7 @@ function TripDetailsModal({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-3 backdrop-blur-sm sm:p-5"
+      className="fixed text-gray-600 inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-3 backdrop-blur-sm sm:p-5"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}

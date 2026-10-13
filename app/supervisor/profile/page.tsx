@@ -535,7 +535,7 @@ export default function SupervisorProfilePage() {
 
           
         </section>
-        `
+        
         {error && (
           <div className="mb-6 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
             <FiAlertCircle className="mt-0.5 shrink-0" size={19} />
@@ -814,7 +814,6 @@ export default function SupervisorProfilePage() {
         </div>
       </main>
 
-      {/* Password Modal */}
       {passwordModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
@@ -908,10 +907,6 @@ export default function SupervisorProfilePage() {
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/* Profile Field                                                               */
-/* -------------------------------------------------------------------------- */
-
 function ProfileField({
   label,
   name,
@@ -960,9 +955,6 @@ function ProfileField({
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/* Mini Info                                                                   */
-/* -------------------------------------------------------------------------- */
 
 function MiniInfo({
   icon,
@@ -1114,7 +1106,7 @@ function PasswordField({
           onClick={() => setShowPassword((previous) => !previous)}
           aria-label={showPassword ? "Hide password" : "Show password"}
           aria-pressed={showPassword}
-          className="absolute inset-y-0 right-0 flex items-center justify-center px-4 text-slate-400 transition hover:text-red-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+          className="absolute inset-y-0 right-0 flex items-center justify-center px-4 text-slate-400 transition hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
         >
           {!showPassword ? (
             <FiEyeOff size={19} />

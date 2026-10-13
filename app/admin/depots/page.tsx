@@ -29,6 +29,7 @@ import {
   getAllDepots,
   updateDepot,
 } from "@/services/depotServices";
+import { toast, ToastContainer } from "react-toastify";
 
 const API_URL = "http://localhost:5000/api";
 
@@ -163,7 +164,7 @@ export default function DepotsPage() {
     } catch (err: any) {
       console.error("Fetch supervisors error:", err);
 
-      alert(
+      toast.error(
         err?.response?.data?.message ||
           err?.message ||
           "Failed to load supervisors.",
@@ -301,14 +302,14 @@ export default function DepotsPage() {
       !form.location.trim() ||
       !form.manager_id
     ) {
-      alert("Please fill in all required fields.");
+      toast.error("Please fill in all required fields.");
       return;
     }
 
     const supervisorId = Number(form.manager_id);
 
     if (!Number.isInteger(supervisorId) || supervisorId <= 0) {
-      alert("Please select a valid supervisor.");
+      toast.error("Please select a valid supervisor.");
       return;
     }
 
@@ -317,7 +318,7 @@ export default function DepotsPage() {
     );
 
     if (!selectedSupervisor) {
-      alert("Please select a valid supervisor.");
+      toast.error("Please select a valid supervisor.");
       return;
     }
 
@@ -340,11 +341,11 @@ export default function DepotsPage() {
       if (editingDepot) {
         await updateDepot(editingDepot.id, payload);
 
-        alert("Depot updated successfully.");
+        toast.success("Depot updated successfully.");
       } else {
         await createDepot(payload);
 
-        alert("Depot created successfully.");
+        toast.success("Depot created successfully.");
       }
 
       await fetchDepots();
@@ -359,7 +360,7 @@ export default function DepotsPage() {
         err?.response?.data?.error ||
         "Failed to save depot.";
 
-      alert(message);
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -391,7 +392,7 @@ export default function DepotsPage() {
     } catch (err: any) {
       console.error("Status update error:", err);
 
-      alert(err?.response?.data?.message || "Failed to update depot status.");
+      toast.error(err?.response?.data?.message || "Failed to update depot status.");
     } finally {
       setStatusUpdatingId(null);
     }
@@ -407,7 +408,7 @@ export default function DepotsPage() {
     const staffCount = Number(depot.total_operational_staff || 0);
 
     if (busCount > 0 || staffCount > 0) {
-      alert(
+      toast.error(
         "This depot has buses or operational staff assigned. Deactivate the depot instead of deleting it.",
       );
 
@@ -427,11 +428,11 @@ export default function DepotsPage() {
 
       setDepots((current) => current.filter((item) => item.id !== depot.id));
 
-      alert("Depot deleted successfully.");
+      toast.success("Depot deleted successfully.");
     } catch (err: any) {
       console.error("Delete depot error:", err);
 
-      alert(err?.response?.data?.message || "Failed to delete depot.");
+      toast.error(err?.response?.data?.message || "Failed to delete depot.");
     } finally {
       setDeletingId(null);
     }
@@ -1063,6 +1064,7 @@ export default function DepotsPage() {
           </div>
         </div>
       )}
+      <ToastContainer/>
     </div>
   );
 }

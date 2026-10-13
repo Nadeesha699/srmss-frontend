@@ -24,6 +24,7 @@ import {
 } from "react-icons/fi";
 
 import { AdminSidebar } from "@/components/SideNavBar/AdminSideNavBar";
+import { toast, ToastContainer } from "react-toastify";
 
 const API = "http://localhost:5000/api";
 
@@ -338,17 +339,17 @@ export default function ReportsPage() {
 
   const generateReport = () => {
     if (!fromDate || !toDate) {
-      alert("Please select both reporting dates.");
+      toast.error("Please select both reporting dates.");
       return;
     }
 
     if (fromDate > toDate) {
-      alert("The start date cannot be later than the end date.");
+      toast.error("The start date cannot be later than the end date.");
       return;
     }
 
     if (loading || refreshing || reporting) {
-      alert("Please wait until report data has finished loading.");
+      toast.error("Please wait until report data has finished loading.");
       return;
     }
 
@@ -668,7 +669,7 @@ export default function ReportsPage() {
       );
     } catch (err) {
       console.error("PDF generation error:", err);
-      alert("Unable to generate the PDF. Please try again.");
+      toast.error("Unable to generate the PDF. Please try again.");
     } finally {
       setReporting(false);
     }
@@ -1218,6 +1219,7 @@ export default function ReportsPage() {
             </section>
           </div>
         </div>
+        <ToastContainer/>
       </main>
     </div>
   );

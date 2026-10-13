@@ -613,7 +613,7 @@ export default function TripUpdatesPage() {
                   />
                 </div>
 
-                <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="mt-6 text-gray-600 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                   <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div className="relative w-full md:max-w-md">
                       <FiSearch
@@ -643,7 +643,7 @@ export default function TripUpdatesPage() {
                       onChange={(event) =>
                         setStatusFilter(event.target.value as StatusFilter)
                       }
-                      className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100"
+                      className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100"
                     >
                       <option value="ALL">All Status</option>
                       <option value="SCHEDULED">Scheduled</option>
@@ -753,7 +753,7 @@ export default function TripUpdatesPage() {
                   )}
                 </div>
 
-                <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                {/* <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                   <h2 className="font-bold text-slate-900">Trip Update Workflow</h2>
                   <p className="mt-1 text-sm text-slate-500">
                     Keep trip statuses updated throughout the journey.
@@ -778,7 +778,7 @@ export default function TripUpdatesPage() {
                       </p>
                     </div>
                   </div>
-                </div>
+                </div> */}
               </>
             )}
           </div>

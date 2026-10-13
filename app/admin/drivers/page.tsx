@@ -22,6 +22,7 @@ import {
 } from "react-icons/fi";
 
 import { AdminSidebar } from "@/components/SideNavBar/AdminSideNavBar";
+import { toast, ToastContainer } from "react-toastify";
 
 const API_URL = "http://localhost:5000/api";
 
@@ -287,12 +288,12 @@ export default function DriversPage() {
       !form.license_no.trim() ||
       !form.license_expiry
     ) {
-      alert("Please complete all required driver fields.");
+      toast.error("Please complete all required driver fields.");
       return;
     }
 
     if (!form.depot_id) {
-      alert("Please select a depot for this driver.");
+      toast.error("Please select a depot for this driver.");
       return;
     }
 
@@ -301,12 +302,12 @@ export default function DriversPage() {
     today.setHours(0, 0, 0, 0);
 
     if (Number.isNaN(expiryDate.getTime())) {
-      alert("Please enter a valid licence expiry date.");
+      toast.error("Please enter a valid licence expiry date.");
       return;
     }
 
     if (expiryDate < today) {
-      alert("The driving licence has expired. Enter a valid expiry date.");
+      toast.error("The driving licence has expired. Enter a valid expiry date.");
       return;
     }
 
@@ -317,7 +318,7 @@ export default function DriversPage() {
       !Number.isFinite(workingHours) ||
       workingHours < 0
     ) {
-      alert("Working hours must be zero or greater.");
+      toast.error("Working hours must be zero or greater.");
       return;
     }
 
@@ -339,12 +340,12 @@ export default function DriversPage() {
         await axios.put(`${API_URL}/drivers/${editingDriver.id}`, payload, {
           headers: getHeaders(),
         });
-        alert("Driver updated successfully.");
+        toast.success("Driver updated successfully.");
       } else {
         await axios.post(`${API_URL}/drivers`, payload, {
           headers: getHeaders(),
         });
-        alert("Driver created successfully.");
+        toast.success("Driver created successfully.");
       }
 
       await fetchDrivers();
@@ -354,7 +355,7 @@ export default function DriversPage() {
       setForm({ ...emptyForm });
     } catch (err) {
       console.error("Save driver error:", err);
-      alert(getErrorMessage(err, "Failed to save driver."));
+      toast.error(getErrorMessage(err, "Failed to save driver."));
     } finally {
       setSaving(false);
     }
@@ -378,10 +379,10 @@ export default function DriversPage() {
         current.filter((item) => item.id !== driver.id),
       );
 
-      alert("Driver deleted successfully.");
+      toast.success("Driver deleted successfully.");
     } catch (err) {
       console.error("Delete driver error:", err);
-      alert(
+      toast.error(
         getErrorMessage(
           err,
           "Failed to delete driver. The driver may be assigned to an existing trip.",
@@ -414,7 +415,7 @@ export default function DriversPage() {
       );
     } catch (err) {
       console.error("Update driver status error:", err);
-      alert(getErrorMessage(err, "Failed to update driver status."));
+      toast.error(getErrorMessage(err, "Failed to update driver status."));
     } finally {
       setStatusUpdatingId(null);
     }
@@ -824,6 +825,7 @@ export default function DriversPage() {
           </div>
         </div>
       )}
+      <ToastContainer/>
     </div>
   );
 }

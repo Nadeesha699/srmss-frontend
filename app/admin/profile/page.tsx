@@ -6,7 +6,6 @@ import {
   FiArrowLeft,
   FiEdit2,
   FiMail,
-  FiPhone,
   FiShield,
   FiUser,
   FiSave,
@@ -106,10 +105,7 @@ export default function AdminProfilePage() {
     } catch (err: any) {
       console.error("Failed to load profile:", err);
 
-      setError(
-        err.response?.data?.message ||
-          "Unable to load your profile."
-      );
+      setError(err.response?.data?.message || "Unable to load your profile.");
     } finally {
       setLoading(false);
     }
@@ -118,9 +114,7 @@ export default function AdminProfilePage() {
   /*
    * Handle form changes
    */
-  const handleChange = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
 
     setForm((prev) => ({
@@ -150,16 +144,12 @@ export default function AdminProfilePage() {
         return;
       }
 
-      const response = await axios.put(
-        `${API_URL}/${profile.id}`,
-        {
-          name: form.name.trim(),
-          email: form.email.trim(),
-        }
-      );
+      const response = await axios.put(`${API_URL}/profile/${profile.id}`, {
+        name: form.name.trim(),
+        email: form.email.trim(),
+      });
 
-      const updatedUser =
-        response.data?.data || response.data;
+      const updatedUser = response.data?.data || response.data;
 
       setProfile(updatedUser);
 
@@ -181,7 +171,7 @@ export default function AdminProfilePage() {
           JSON.stringify({
             ...localUser,
             ...updatedUser,
-          })
+          }),
         );
       }
 
@@ -194,10 +184,7 @@ export default function AdminProfilePage() {
     } catch (err: any) {
       console.error("Failed to update profile:", err);
 
-      setError(
-        err.response?.data?.message ||
-          "Unable to update your profile."
-      );
+      setError(err.response?.data?.message || "Unable to update your profile.");
     } finally {
       setSaving(false);
     }
@@ -221,9 +208,7 @@ export default function AdminProfilePage() {
   /*
    * Password form
    */
-  const handlePasswordChange = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handlePasswordChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
 
     setPasswordForm((prev) => ({
@@ -254,27 +239,19 @@ export default function AdminProfilePage() {
       }
 
       if (passwordForm.newPassword.length < 8) {
-        setError(
-          "New password must contain at least 8 characters."
-        );
+        setError("New password must contain at least 8 characters.");
         return;
       }
 
-      if (
-        passwordForm.newPassword !==
-        passwordForm.confirmPassword
-      ) {
+      if (passwordForm.newPassword !== passwordForm.confirmPassword) {
         setError("New passwords do not match.");
         return;
       }
 
-      await axios.put(
-        `${API_URL}/${profile.id}/password`,
-        {
-          currentPassword: passwordForm.currentPassword,
-          newPassword: passwordForm.newPassword,
-        }
-      );
+      await axios.put(`${API_URL}/${profile.id}/password`, {
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword,
+      });
 
       setPasswordForm({
         currentPassword: "",
@@ -292,10 +269,7 @@ export default function AdminProfilePage() {
     } catch (err: any) {
       console.error("Password change failed:", err);
 
-      setError(
-        err.response?.data?.message ||
-          "Unable to change password."
-      );
+      setError(err.response?.data?.message || "Unable to change password.");
     } finally {
       setChangingPassword(false);
     }
@@ -313,9 +287,9 @@ export default function AdminProfilePage() {
       return parts[0].charAt(0).toUpperCase();
     }
 
-    return `${parts[0].charAt(0)}${parts[
-      parts.length - 1
-    ].charAt(0)}`.toUpperCase();
+    return `${parts[0].charAt(0)}${parts[parts.length - 1].charAt(
+      0,
+    )}`.toUpperCase();
   };
 
   const formatRole = (role: string) => {
@@ -332,9 +306,7 @@ export default function AdminProfilePage() {
       default:
         return role
           ?.replaceAll("_", " ")
-          .replace(/\b\w/g, (char) =>
-            char.toUpperCase()
-          );
+          .replace(/\b\w/g, (char) => char.toUpperCase());
     }
   };
 
@@ -372,10 +344,7 @@ export default function AdminProfilePage() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50">
         <div className="flex items-center gap-3 rounded-xl bg-white px-6 py-4 shadow-sm">
-          <FiLoader
-            size={20}
-            className="animate-spin text-red-600"
-          />
+          <FiLoader size={20} className="animate-spin text-red-600" />
           <span className="text-sm font-medium text-slate-600">
             Loading profile...
           </span>
@@ -414,8 +383,7 @@ export default function AdminProfilePage() {
 
   const initials = getInitials(profile.name);
 
-  const isActive =
-    profile.status?.toUpperCase() === "ACTIVE";
+  const isActive = profile.status?.toUpperCase() === "ACTIVE";
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -432,13 +400,10 @@ export default function AdminProfilePage() {
               Back
             </button>
 
-            <h1 className="text-2xl font-bold text-slate-950">
-              My Profile
-            </h1>
+            <h1 className="text-2xl font-bold text-slate-950">My Profile</h1>
 
             <p className="mt-1 text-sm text-slate-500">
-              Manage your administrator account and security
-              settings.
+              Manage your administrator account and security settings.
             </p>
           </div>
 
@@ -454,9 +419,7 @@ export default function AdminProfilePage() {
             >
               <FiEdit2 size={17} />
 
-              <span className="hidden sm:inline">
-                Edit Profile
-              </span>
+              <span className="hidden sm:inline">Edit Profile</span>
 
               <span className="sm:hidden">Edit</span>
             </button>
@@ -522,9 +485,7 @@ export default function AdminProfilePage() {
                 <div className="flex items-center gap-3">
                   <div
                     className={`flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm ${
-                      isActive
-                        ? "text-green-600"
-                        : "text-amber-600"
+                      isActive ? "text-green-600" : "text-amber-600"
                     }`}
                   >
                     <FiCheckCircle size={19} />
@@ -533,9 +494,7 @@ export default function AdminProfilePage() {
                   <div>
                     <p
                       className={`text-xs font-medium ${
-                        isActive
-                          ? "text-green-700"
-                          : "text-amber-700"
+                        isActive ? "text-green-700" : "text-amber-700"
                       }`}
                     >
                       Account Status
@@ -543,9 +502,7 @@ export default function AdminProfilePage() {
 
                     <p
                       className={`mt-0.5 text-sm font-bold ${
-                        isActive
-                          ? "text-green-800"
-                          : "text-amber-800"
+                        isActive ? "text-green-800" : "text-amber-800"
                       }`}
                     >
                       {profile.status}
@@ -565,9 +522,7 @@ export default function AdminProfilePage() {
                 <MiniInfo
                   icon={<FiActivity />}
                   label="Last Activity"
-                  value={formatActivity(
-                    profile.updated_at
-                  )}
+                  value={formatActivity(profile.updated_at)}
                 />
 
                 <MiniInfo
@@ -599,8 +554,7 @@ export default function AdminProfilePage() {
                     </h2>
 
                     <p className="text-sm text-slate-500">
-                      Your basic administrator account
-                      information.
+                      Your basic administrator account information.
                     </p>
                   </div>
                 </div>
@@ -626,15 +580,6 @@ export default function AdminProfilePage() {
                     icon={<FiMail />}
                     type="email"
                   />
-
-                  {/* <ProfileField
-                    label="Phone Number"
-                    name="phone"
-                    value={form.phone}
-                    editing={editing}
-                    onChange={handleChange}
-                    icon={<FiPhone />}
-                  /> */}
 
                   <ProfileField
                     label="Role"
@@ -665,17 +610,12 @@ export default function AdminProfilePage() {
                       className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {saving ? (
-                        <FiLoader
-                          size={17}
-                          className="animate-spin"
-                        />
+                        <FiLoader size={17} className="animate-spin" />
                       ) : (
                         <FiSave size={17} />
                       )}
 
-                      {saving
-                        ? "Saving..."
-                        : "Save Changes"}
+                      {saving ? "Saving..." : "Save Changes"}
                     </button>
                   </div>
                 )}
@@ -715,11 +655,7 @@ export default function AdminProfilePage() {
                   value={profile.status}
                   icon={<FiCheckCircle />}
                   iconClass="bg-green-50 text-green-600"
-                  valueClass={
-                    isActive
-                      ? "text-green-600"
-                      : "text-amber-600"
-                  }
+                  valueClass={isActive ? "text-green-600" : "text-amber-600"}
                 />
 
                 <AccountItem
@@ -751,9 +687,7 @@ export default function AdminProfilePage() {
                   </div>
 
                   <div>
-                    <h2 className="font-bold text-slate-900">
-                      Security
-                    </h2>
+                    <h2 className="font-bold text-slate-900">Security</h2>
 
                     <p className="text-sm text-slate-500">
                       Keep your administrator account secure.
@@ -770,107 +704,106 @@ export default function AdminProfilePage() {
                   description="Change your password to keep your account secure."
                   action="Change Password"
                   onClick={() => {
-                    setShowPasswordForm(
-                      !showPasswordForm
-                    );
+                    setShowPasswordForm(!showPasswordForm);
                     setError("");
                     setSuccess("");
                   }}
                 />
-
-                {/* Password Form */}
                 {showPasswordForm && (
-                  <div className="rounded-xl border border-slate-200 bg-white p-5">
-                    <h3 className="font-bold text-slate-900">
-                      Change Password
-                    </h3>
+                  <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/50 p-4 backdrop-blur-sm">
+                    <div className="my-auto w-full max-w-md rounded-2xl bg-white shadow-2xl">
+                      {/* Header */}
+                      <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
+                        <div>
+                          <h2 className="text-lg font-bold text-slate-900">
+                            Change Password
+                          </h2>
 
-                    <p className="mt-1 text-sm text-slate-500">
-                      Enter your current password and choose
-                      a new password.
-                    </p>
+                          <p className="mt-1 text-sm leading-5 text-slate-500">
+                            Enter your current password and choose a new
+                            password.
+                          </p>
+                        </div>
 
-                    <div className="mt-5 space-y-4">
-                      <PasswordField
-                        label="Current Password"
-                        name="currentPassword"
-                        value={
-                          passwordForm.currentPassword
-                        }
-                        onChange={handlePasswordChange}
-                        visible={showCurrentPassword}
-                        onToggle={() =>
-                          setShowCurrentPassword(
-                            !showCurrentPassword
-                          )
-                        }
-                      />
+                        <button
+                          type="button"
+                          onClick={() => setShowPasswordForm(false)}
+                          className="ml-3 shrink-0 rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                          aria-label="Close change password form"
+                        >
+                          <FiX size={20} />
+                        </button>
+                      </div>
 
-                      <PasswordField
-                        label="New Password"
-                        name="newPassword"
-                        value={passwordForm.newPassword}
-                        onChange={handlePasswordChange}
-                        visible={showNewPassword}
-                        onToggle={() =>
-                          setShowNewPassword(
-                            !showNewPassword
-                          )
-                        }
-                      />
+                      {/* Form Content */}
+                      <div className="space-y-5 p-6">
+                        <PasswordField
+                          label="Current Password"
+                          name="currentPassword"
+                          value={passwordForm.currentPassword}
+                          onChange={handlePasswordChange}
+                          visible={showCurrentPassword}
+                          onToggle={() =>
+                            setShowCurrentPassword(!showCurrentPassword)
+                          }
+                        />
 
-                      <PasswordField
-                        label="Confirm New Password"
-                        name="confirmPassword"
-                        value={
-                          passwordForm.confirmPassword
-                        }
-                        onChange={handlePasswordChange}
-                        visible={showConfirmPassword}
-                        onToggle={() =>
-                          setShowConfirmPassword(
-                            !showConfirmPassword
-                          )
-                        }
-                      />
-                    </div>
+                        <PasswordField
+                          label="New Password"
+                          name="newPassword"
+                          value={passwordForm.newPassword}
+                          onChange={handlePasswordChange}
+                          visible={showNewPassword}
+                          onToggle={() => setShowNewPassword(!showNewPassword)}
+                        />
 
-                    <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowPasswordForm(false);
+                        <PasswordField
+                          label="Confirm New Password"
+                          name="confirmPassword"
+                          value={passwordForm.confirmPassword}
+                          onChange={handlePasswordChange}
+                          visible={showConfirmPassword}
+                          onToggle={() =>
+                            setShowConfirmPassword(!showConfirmPassword)
+                          }
+                        />
 
-                          setPasswordForm({
-                            currentPassword: "",
-                            newPassword: "",
-                            confirmPassword: "",
-                          });
+                        {/* Buttons */}
+                        <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowPasswordForm(false);
 
-                          setError("");
-                        }}
-                        className="rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50"
-                      >
-                        Cancel
-                      </button>
+                              setPasswordForm({
+                                currentPassword: "",
+                                newPassword: "",
+                                confirmPassword: "",
+                              });
 
-                      <button
-                        type="button"
-                        onClick={handleChangePassword}
-                        disabled={changingPassword}
-                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-3 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60"
-                      >
-                        {changingPassword && (
-                          <FiLoader
-                            size={16}
-                            className="animate-spin"
-                          />
-                        )}
+                              setError("");
+                            }}
+                            className="w-full rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 sm:w-auto"
+                          >
+                            Cancel
+                          </button>
 
-                        {changingPassword
-                          ? "Changing..."
-                          : "Change Password"}
-                      </button>
+                          <button
+                            type="button"
+                            onClick={handleChangePassword}
+                            disabled={changingPassword}
+                            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                          >
+                            {changingPassword && (
+                              <FiLoader size={16} className="animate-spin" />
+                            )}
+
+                            {changingPassword
+                              ? "Changing..."
+                              : "Change Password"}
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -909,9 +842,7 @@ function ProfileField({
   name: string;
   value: string;
   editing: boolean;
-  onChange: (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => void;
+  onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   icon: React.ReactNode;
   type?: string;
 }) {
@@ -923,9 +854,7 @@ function ProfileField({
 
       {editing ? (
         <div className="flex items-center gap-3 rounded-xl border border-slate-300 bg-white px-4 py-3 transition focus-within:border-red-500 focus-within:ring-4 focus-within:ring-red-100">
-          <span className="shrink-0 text-slate-400">
-            {icon}
-          </span>
+          <span className="shrink-0 text-slate-400">{icon}</span>
 
           <input
             type={type}
@@ -937,9 +866,7 @@ function ProfileField({
         </div>
       ) : (
         <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-          <span className="shrink-0 text-slate-400">
-            {icon}
-          </span>
+          <span className="shrink-0 text-slate-400">{icon}</span>
 
           <span className="truncate text-sm font-medium text-slate-700">
             {value || "—"}
@@ -970,13 +897,9 @@ function MiniInfo({
       </div>
 
       <div className="min-w-0">
-        <p className="text-xs text-slate-400">
-          {label}
-        </p>
+        <p className="text-xs text-slate-400">{label}</p>
 
-        <p className="truncate text-sm font-semibold text-slate-700">
-          {value}
-        </p>
+        <p className="truncate text-sm font-semibold text-slate-700">{value}</p>
       </div>
     </div>
   );
@@ -1009,13 +932,9 @@ function AccountItem({
         </div>
 
         <div className="min-w-0">
-          <p className="text-xs font-medium text-slate-400">
-            {label}
-          </p>
+          <p className="text-xs font-medium text-slate-400">{label}</p>
 
-          <p
-            className={`mt-1 truncate text-sm font-bold ${valueClass}`}
-          >
+          <p className={`mt-1 truncate text-sm font-bold ${valueClass}`}>
             {value}
           </p>
         </div>
@@ -1051,13 +970,9 @@ function SecurityItem({
         </div>
 
         <div>
-          <p className="font-semibold text-slate-800">
-            {title}
-          </p>
+          <p className="font-semibold text-slate-800">{title}</p>
 
-          <p className="mt-1 text-sm text-slate-500">
-            {description}
-          </p>
+          <p className="mt-1 text-sm text-slate-500">{description}</p>
         </div>
       </div>
 
@@ -1073,10 +988,6 @@ function SecurityItem({
   );
 }
 
-/* -------------------------------------------------
-   PASSWORD FIELD
-------------------------------------------------- */
-
 function PasswordField({
   label,
   name,
@@ -1088,9 +999,7 @@ function PasswordField({
   label: string;
   name: string;
   value: string;
-  onChange: (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => void;
+  onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   visible: boolean;
   onToggle: () => void;
 }) {
@@ -1116,11 +1025,7 @@ function PasswordField({
           onClick={onToggle}
           className="text-slate-400 hover:text-slate-600"
         >
-          {visible ? (
-            <FiEyeOff size={18} />
-          ) : (
-            <FiEye size={18} />
-          )}
+          {!visible ? <FiEyeOff size={18} /> : <FiEye size={18} />}
         </button>
       </div>
     </div>

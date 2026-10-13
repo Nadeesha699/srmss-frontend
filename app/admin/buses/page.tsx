@@ -19,6 +19,7 @@ import {
 } from "react-icons/fi";
 
 import { AdminSidebar } from "@/components/SideNavBar/AdminSideNavBar";
+import { toast, ToastContainer } from "react-toastify";
 
 const API_URL = "http://localhost:5000/api/buses";
 const DEPOT_API_URL = "http://localhost:5000/api/depots";
@@ -299,7 +300,7 @@ const filteredBuses = buses.filter((bus) => {
       !form.mileage ||
       !form.depot_id
     ) {
-      alert(
+      toast.error(
         "Please fill in all required fields, including depot.",
       );
       return;
@@ -310,17 +311,17 @@ const filteredBuses = buses.filter((bus) => {
     const depotId = Number(form.depot_id);
 
     if (capacity <= 0) {
-      alert("Capacity must be greater than 0.");
+      toast.error("Capacity must be greater than 0.");
       return;
     }
 
     if (mileage < 0) {
-      alert("Mileage cannot be negative.");
+      toast.error("Mileage cannot be negative.");
       return;
     }
 
     if (!depotId || depotId <= 0) {
-      alert("Please select a valid depot.");
+      toast.error("Please select a valid depot.");
       return;
     }
 
@@ -379,7 +380,7 @@ const filteredBuses = buses.filter((bus) => {
           ),
         );
 
-        alert("Bus updated successfully.");
+        toast.success("Bus updated successfully.");
       } else {
         /* ---------------------------------------------------
            CREATE
@@ -402,7 +403,7 @@ const filteredBuses = buses.filter((bus) => {
           await fetchBuses();
         }
 
-        alert("Bus added successfully.");
+        toast.success("Bus added successfully.");
       }
 
       closeModal();
@@ -414,7 +415,7 @@ const filteredBuses = buses.filter((bus) => {
         "Failed to save bus.";
 
       setError(message);
-      alert(message);
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -451,14 +452,14 @@ const filteredBuses = buses.filter((bus) => {
         ),
       );
 
-      alert("Bus deleted successfully.");
+  toast.success("Bus deleted successfully.");
     } catch (error: any) {
       console.error(
         "Delete bus error:",
         error,
       );
 
-      alert(
+      toast.error(
         error?.response?.data?.message ||
           "Failed to delete bus.",
       );
@@ -478,7 +479,7 @@ const filteredBuses = buses.filter((bus) => {
       bus.status !== "AVAILABLE" &&
       bus.status !== "INACTIVE"
     ) {
-      alert(
+      toast.error(
         "Only available or inactive buses can be activated/deactivated.",
       );
 
@@ -525,7 +526,7 @@ const filteredBuses = buses.filter((bus) => {
         error,
       );
 
-      alert(
+      toast.error(
         error?.response?.data?.message ||
           "Failed to update bus status.",
       );
@@ -1245,6 +1246,7 @@ const filteredBuses = buses.filter((bus) => {
           </div>
         </div>
       )}
+      <ToastContainer/>
     </div>
   );
 }

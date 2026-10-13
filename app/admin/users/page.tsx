@@ -27,6 +27,7 @@ import {
 } from "react-icons/fi";
 
 import { AdminSidebar } from "@/components/SideNavBar/AdminSideNavBar";
+import { toast, ToastContainer } from "react-toastify";
 
 /* =========================================================
    API
@@ -183,7 +184,7 @@ export default function UsersPage() {
     } catch (err: any) {
       console.error("Fetch depots error:", err);
 
-      alert(
+      toast.error(
         err?.response?.data?.message ||
           err?.message ||
           "Failed to load depots.",
@@ -359,12 +360,12 @@ export default function UsersPage() {
     e.preventDefault();
 
     if (!form.name.trim()) {
-      alert("Please enter the user name.");
+      toast.error("Please enter the user name.");
       return;
     }
 
     if (!form.email.trim()) {
-      alert(
+      toast.error(
         "Please enter the email address.",
       );
       return;
@@ -374,7 +375,7 @@ export default function UsersPage() {
       !editingUser &&
       !form.password.trim()
     ) {
-      alert("Please enter a password.");
+      toast.error("Please enter a password.");
       return;
     }
 
@@ -387,7 +388,7 @@ export default function UsersPage() {
       form.role !== "ADMIN" &&
       !form.depot_id
     ) {
-      alert(
+      toast.error(
         "Please select a depot for this user.",
       );
       return;
@@ -423,7 +424,7 @@ export default function UsersPage() {
           payload,
         );
 
-        alert(
+        toast.success(
           "User updated successfully.",
         );
       } else {
@@ -432,7 +433,7 @@ export default function UsersPage() {
           payload,
         );
 
-        alert(
+        toast.success(
           "User created successfully.",
         );
       }
@@ -447,7 +448,7 @@ export default function UsersPage() {
         err,
       );
 
-      alert(
+      toast.error(
         err?.response?.data?.message ||
           err?.response?.data?.error ||
           "Failed to save user.",
@@ -484,7 +485,7 @@ export default function UsersPage() {
         ),
       );
 
-      alert(
+      toast.success(
         "User deleted successfully.",
       );
     } catch (err: any) {
@@ -493,7 +494,7 @@ export default function UsersPage() {
         err,
       );
 
-      alert(
+    toast.error(
         err?.response?.data?.message ||
           "Failed to delete user.",
       );
@@ -1180,6 +1181,7 @@ export default function UsersPage() {
           </div>
         </div>
       )}
+      <ToastContainer/>
     </div>
   );
 }
