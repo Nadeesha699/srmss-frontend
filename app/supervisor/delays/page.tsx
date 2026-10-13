@@ -117,17 +117,6 @@ const formatDateTime = (value?: string) => {
       });
 };
 
-const getStatusClass = (status?: string) => {
-  switch ((status || "REPORTED").toUpperCase()) {
-    case "RESOLVED":
-      return "bg-emerald-100 text-emerald-700";
-    case "IN_PROGRESS":
-      return "bg-blue-100 text-blue-700";
-    default:
-      return "bg-amber-100 text-amber-700";
-  }
-};
-
 export default function SupervisorDelaysPage() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [depotId, setDepotId] = useState<number | null>(null);
@@ -142,7 +131,6 @@ export default function SupervisorDelaysPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [updatingStatusId, setUpdatingStatusId] = useState<number | null>(null);
   const [error, setError] = useState("");
 
   const [form, setForm] = useState<DelayForm>({
@@ -268,115 +256,6 @@ export default function SupervisorDelaysPage() {
     [trips, editingDelay],
   );
 
-  const openAddModal = () => {
-    setEditingDelay(null);
-    setForm({
-      trip_id: "",
-      delay_minutes: "",
-      reason: "Traffic Congestion",
-      description: "",
-    });
-    setShowModal(true);
-  };
-
-  const openEditModal = (delay: Delay) => {
-    setEditingDelay(delay);
-    setForm({
-      trip_id: String(delay.trip_id),
-      delay_minutes: String(delay.delay_minutes),
-      reason: delay.reason || "Other",
-      description: delay.description || delay.notes || "",
-    });
-    setShowModal(true);
-  };
-
-  const closeModal = () => {
-    if (saving) return;
-    setShowModal(false);
-    setEditingDelay(null);
-  };
-
-  const saveDelay = async () => {
-    if (!form.trip_id) {
-      toast.error("Please select a trip.");
-      return;
-    }
-
-    const minutes = Number(form.delay_minutes);
-
-    if (!Number.isInteger(minutes) || minutes <= 0) {
-      toast.error("Delay minutes must be a positive whole number.");
-      return;
-    }
-
-    if (!form.reason) {
-      toast.error("Please select a delay reason.");
-      return;
-    }
-
-    const selectedTrip = trips.find((trip) => trip.id === Number(form.trip_id));
-
-    if (!selectedTrip || Number(selectedTrip.depot_id) !== depotId) {
-      toast.error("Select a valid trip from your depot.");
-      return;
-    }
-
-    try {
-      setSaving(true);
-
-      const token = localStorage.getItem("srmss_token");
-      const config = token
-        ? { headers: { Authorization: `Bearer ${token}` } }
-        : {};
-
-      const payload = {
-        trip_id: Number(form.trip_id),
-        delay_minutes: minutes,
-        reason: form.reason,
-        description: form.description.trim(),
-      };
-
-      if (editingDelay) {
-        await axios.put(`${DELAY_API}/${editingDelay.id}`, payload, config);
-      } else {
-        await axios.post(DELAY_API, payload, config);
-      }
-
-      setShowModal(false);
-      setEditingDelay(null);
-      await loadData(true);
-    } catch (err: any) {
-      console.error("Failed to save delay:", err);
-      toast.error(err?.response?.data?.message || "Failed to save delay report.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const updateDelayStatus = async (delay: Delay, status: DelayStatus) => {
-    try {
-      setUpdatingStatusId(delay.id);
-
-      const token = localStorage.getItem("srmss_token");
-      const config = token
-        ? { headers: { Authorization: `Bearer ${token}` } }
-        : {};
-
-      await axios.patch(`${DELAY_API}/${delay.id}/status`, { status }, config);
-
-      setDelays((current) =>
-        current.map((item) =>
-          item.id === delay.id ? { ...item, status } : item,
-        ),
-      );
-    } catch (err: any) {
-      console.error("Failed to update delay status:", err);
-      toast.error(err?.response?.data?.message || "Failed to update delay status.");
-    } finally {
-      setUpdatingStatusId(null);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-slate-50">
       <SupervisorSidebar
@@ -385,7 +264,7 @@ export default function SupervisorDelaysPage() {
       />
 
       <main className="min-h-screen lg:pl-72">
-          <header className="sticky top-0 z-30 flex h-16 items-center border-b border-slate-200 bg-white/95 px-4 backdrop-blur md:px-6">
+        <header className="sticky top-0 z-30 flex h-16 items-center border-b border-slate-200 bg-white/95 px-4 backdrop-blur md:px-6">
           <button
             type="button"
             onClick={() => setMobileOpen(true)}
@@ -403,13 +282,16 @@ export default function SupervisorDelaysPage() {
               SRMSS Management Portal
             </p>
           </div>
-           <button
+          <button
             type="button"
-             onClick={() => loadData(true)}
-                disabled={refreshing || depotId === null}
+            onClick={() => loadData(true)}
+            disabled={refreshing || depotId === null}
             className="ml-auto inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-red-200 hover:text-red-600 disabled:opacity-50"
           >
-            <FiRefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
+            <FiRefreshCw
+              size={16}
+              className={refreshing ? "animate-spin" : ""}
+            />
             <span className="hidden sm:inline">Refresh</span>
           </button>
         </header>
@@ -418,23 +300,11 @@ export default function SupervisorDelaysPage() {
           <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
             <div>
               <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
-                  Delay Management
+                Delay Management
               </h1>
-             <p className="mt-1 max-w-2xl text-sm text-slate-500">
-                 Record and monitor delay reports for your depot.
+              <p className="mt-1 max-w-2xl text-sm text-slate-500">
+                Record and monitor delay reports for your depot.
               </p>
-            </div>
-
-            <div className="flex gap-2">
-
-              <button
-                onClick={openAddModal}
-                disabled={depotId === null}
-                className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60"
-              >
-                <FiPlus />
-                Record Delay
-              </button>
             </div>
           </div>
 
@@ -548,14 +418,6 @@ export default function SupervisorDelaysPage() {
                         </h2>
                       </div>
                     </div>
-
-                    <button
-                      onClick={() => openEditModal(delay)}
-                      className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-red-600"
-                      aria-label="Edit delay"
-                    >
-                      <FiEdit2 size={17} />
-                    </button>
                   </div>
 
                   <div className="mt-5 grid grid-cols-2 gap-3">
@@ -600,175 +462,6 @@ export default function SupervisorDelaysPage() {
           )}
         </div>
       </main>
-
-      {showModal && (
-        <div className="fixed text-gray-500 inset-0 z-[60] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
-          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">
-                  {editingDelay ? "Edit Delay" : "Record Trip Delay"}
-                </h2>
-                <p className="mt-1 text-sm text-slate-500">
-                  Record delay details for a trip in your depot.
-                </p>
-              </div>
-              <button
-                onClick={closeModal}
-                disabled={saving}
-                className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 disabled:opacity-50"
-                aria-label="Close modal"
-              >
-                <FiX size={20} />
-              </button>
-            </div>
-
-            <div className="space-y-5 p-6">
-              <div>
-                <label className="mb-1.5 block text-sm font-semibold text-slate-700">
-                  Trip
-                </label>
-                <select
-                  value={form.trip_id}
-                  onChange={(event) =>
-                    setForm({ ...form, trip_id: event.target.value })
-                  }
-                  disabled={!!editingDelay}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-red-500 focus:ring-4 focus:ring-red-100 disabled:bg-slate-100"
-                >
-                  <option value="">Select trip</option>
-                  {availableTrips.map((trip) => (
-                    <option key={trip.id} value={trip.id}>
-                      {getTripNo(trip)} — {getRoute(trip)} — {getBus(trip)}
-                    </option>
-                  ))}
-                </select>
-                {availableTrips.length === 0 && !editingDelay && (
-                  <p className="mt-2 text-xs text-amber-600">
-                    No eligible trips are available in this depot.
-                  </p>
-                )}
-              </div>
-
-              {form.trip_id && (
-                <div className="rounded-xl border border-red-100 bg-red-50 p-4">
-                  {(() => {
-                    const trip = trips.find(
-                      (item) => item.id === Number(form.trip_id),
-                    );
-
-                    if (!trip) return null;
-
-                    return (
-                      <div className="grid gap-3 sm:grid-cols-3">
-                        <div>
-                          <p className="text-xs text-red-500">Route</p>
-                          <p className="mt-1 flex items-center gap-2 text-sm font-semibold text-slate-800">
-                            <FiMapPin className="shrink-0 text-red-500" />
-                            {getRoute(trip)}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-red-500">Bus</p>
-                          <p className="mt-1 flex items-center gap-2 text-sm font-semibold text-slate-800">
-                            <FiTruck className="shrink-0 text-red-500" />
-                            {getBus(trip)}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-red-500">
-                            Operational Staff
-                          </p>
-                          <p className="mt-1 flex items-center gap-2 text-sm font-semibold text-slate-800">
-                            <FiUser className="shrink-0 text-red-500" />
-                            {getStaff(trip)}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })()}
-                </div>
-              )}
-
-              <div>
-                <label className="mb-1.5 block text-sm font-semibold text-slate-700">
-                  Delay Minutes
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={form.delay_minutes}
-                  onChange={(event) =>
-                    setForm({
-                      ...form,
-                      delay_minutes: event.target.value,
-                    })
-                  }
-                  placeholder="e.g. 20"
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-red-500 focus:ring-4 focus:ring-red-100"
-                />
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-sm font-semibold text-slate-700">
-                  Delay Reason
-                </label>
-                <select
-                  value={form.reason}
-                  onChange={(event) =>
-                    setForm({ ...form, reason: event.target.value })
-                  }
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-red-500 focus:ring-4 focus:ring-red-100"
-                >
-                  {reasons.map((reason) => (
-                    <option key={reason} value={reason}>
-                      {reason}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-sm font-semibold text-slate-700">
-                  Description
-                </label>
-                <textarea
-                  rows={4}
-                  value={form.description}
-                  onChange={(event) =>
-                    setForm({
-                      ...form,
-                      description: event.target.value,
-                    })
-                  }
-                  placeholder="Explain the reason for the delay..."
-                  className="w-full resize-none rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-red-500 focus:ring-4 focus:ring-red-100"
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 border-t border-slate-200 px-6 py-4">
-              <button
-                onClick={closeModal}
-                disabled={saving}
-                className="rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={saveDelay}
-                disabled={saving || depotId === null}
-                className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {saving && <FiRefreshCw className="animate-spin" size={16} />}
-                {editingDelay ? "Update Delay" : "Save Delay"}
-              </button>
-            </div>
-          </div>
-          <ToastContainer/>
-        </div>
-      )}
     </div>
   );
 }
