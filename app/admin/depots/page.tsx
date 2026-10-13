@@ -101,10 +101,6 @@ export default function DepotsPage() {
     status: "ACTIVE",
   });
 
-  /* =========================================================
-     GET DEPOTS
-  ========================================================= */
-
   const fetchDepots = async () => {
     try {
       setLoading(true);
@@ -329,7 +325,6 @@ export default function DepotsPage() {
       setSaving(true);
       setError("");
 
-
       const payload = {
         depot_code: form.depot_code.trim(),
 
@@ -454,9 +449,6 @@ export default function DepotsPage() {
       />
 
       <div className="lg:pl-72">
-        {/* =====================================================
-            HEADER
-        ===================================================== */}
 
         <header className="sticky top-0 z-30 flex h-16 items-center border-b border-slate-200 bg-white/95 px-4 backdrop-blur md:px-6">
           <button

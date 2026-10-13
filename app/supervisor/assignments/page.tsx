@@ -467,13 +467,12 @@ export default function AssignmentsPage() {
         mobileOpen={mobileOpen}
         onClose={() => setMobileOpen(false)}
       />
-      ```
       <main className="lg:pl-72">
         <header className="sticky top-0 z-30 flex h-16 items-center border-b border-slate-200 bg-white/95 px-4 backdrop-blur md:px-6">
           <button
             type="button"
             onClick={() => setMobileOpen(true)}
-            className="mr-4 rounded-lg p-2 text-slate-600 transition hover:bg-slate-100 lg:hidden"
+            className="mr-4 rounded-lg p-2 text-slate-600 hover:bg-slate-100 lg:hidden"
             aria-label="Open menu"
           >
             <FiMenu size={22} />
@@ -481,14 +480,13 @@ export default function AssignmentsPage() {
 
           <div>
             <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
-              Supervisor
+              Supervisor Portal
             </p>
             <p className="font-semibold text-slate-800">
               SRMSS Management Portal
             </p>
           </div>
-
-          <button
+           <button
             type="button"
             onClick={() => void loadData()}
             disabled={loading}
@@ -498,6 +496,7 @@ export default function AssignmentsPage() {
             <span className="hidden sm:inline">Refresh</span>
           </button>
         </header>
+      
 
         <div className="p-4 md:p-6 lg:p-8">
           <div className="mx-auto max-w-6xl">

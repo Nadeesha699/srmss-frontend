@@ -330,40 +330,34 @@ export default function SupervisorMaintenancePage() {
       />
 
       <main className="min-h-screen lg:ml-72">
-        <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
-          <div className="flex items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setMobileOpen(true)}
-                className="rounded-lg border border-slate-200 p-2 lg:hidden"
-                aria-label="Open navigation"
-              >
-                <FiMenu size={20} />
-              </button>
+        <header className="sticky top-0 z-30 flex h-16 items-center border-b border-slate-200 bg-white/95 px-4 backdrop-blur md:px-6">
+          <button
+            type="button"
+            onClick={() => setMobileOpen(true)}
+            className="mr-4 rounded-lg p-2 text-slate-600 hover:bg-slate-100 lg:hidden"
+            aria-label="Open menu"
+          >
+            <FiMenu size={22} />
+          </button>
 
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-red-600">
-                  Depot Management
-                </p>
-                <h1 className="text-xl font-bold">
-                  Maintenance Management
-                </h1>
-              </div>
-            </div>
-
-            <button
-              onClick={() => void loadData(true)}
-              disabled={refreshing || depotId === null}
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold hover:bg-slate-50 disabled:opacity-50"
-            >
-              <FiRefreshCw
-                className={refreshing ? "animate-spin" : ""}
-              />
-              <span className="hidden sm:inline">Refresh</span>
-            </button>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
+              Supervisor Portal
+            </p>
+            <p className="font-semibold text-slate-800">
+              SRMSS Management Portal
+            </p>
           </div>
+           <button
+            type="button"
+            onClick={() => void loadData()}
+            disabled={loading}
+            className="ml-auto inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-red-200 hover:text-red-600 disabled:opacity-50"
+          >
+            <FiRefreshCw size={16} className={loading ? "animate-spin" : ""} />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
         </header>
-
         <div className="p-4 sm:p-6 lg:p-8">
           <div className="mb-6">
             <h2 className="text-2xl font-bold">

@@ -1,8 +1,13 @@
-
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import axios from "axios";
 import {
   FiAlertTriangle,
@@ -23,6 +28,7 @@ import SupervisorSidebar from "@/components/SideNavBar/SupervisorSidebar";
 
 const API_BASE = "http://localhost:5000/api";
 
+const DEPOT_API = `${API_BASE}/depots`;
 const SCHEDULE_API = `${API_BASE}/schedules`;
 const BUS_API = `${API_BASE}/buses`;
 const USER_API = `${API_BASE}/users`;
@@ -30,8 +36,15 @@ const ASSIGNMENT_API = `${API_BASE}/assignments`;
 const TRIP_API = `${API_BASE}/trips`;
 const DELAY_API = `${API_BASE}/delays`;
 
+type Depot = {
+  id: number;
+  name: string;
+  depot_code?: string;
+};
+
 type Schedule = {
   id: number;
+  depot_id?: number;
   schedule_code?: string;
   route_code?: string;
   route_name?: string;
@@ -64,77 +77,61 @@ type OperationalStaff = {
 
 type Assignment = {
   id: number;
+  depot_id?: number;
   schedule_id: number;
   bus_id: number;
   staff_id: number;
   status?: string;
-
   schedule_code?: string;
   route_code?: string;
   route_name?: string;
   start_point?: string;
   end_point?: string;
-
   registration_no?: string;
   bus?: string;
-
   staff_name?: string;
-
   departure_time?: string;
   arrival_time?: string;
 };
 
 type Trip = {
   id: number;
-
+  depot_id?: number;
   trip_no?: string;
   tripNo?: string;
-
   schedule_id?: number;
   assignment_id?: number;
-
   schedule_code?: string;
   route_code?: string;
   route_name?: string;
   start_point?: string;
   end_point?: string;
-
-  customer_number?: string;
-
   bus_id?: number;
   registration_no?: string;
   bus?: string;
-
   staff_id?: number;
   staff_name?: string;
-
   departure_time?: string;
   arrival_time?: string;
-
   actual_start_time?: string;
   actual_end_time?: string;
-
   status?: string;
 };
 
 type Delay = {
   id: number;
+  depot_id?: number;
   trip_id?: number;
-
   trip_no?: string;
   tripNo?: string;
-
   route?: string;
   route_name?: string;
-
   bus?: string;
   registration_no?: string;
-
   delay_minutes?: number;
   reason?: string;
   description?: string;
   notes?: string;
-
   created_at?: string;
 };
 
@@ -154,33 +151,50 @@ type DashboardData = {
   delays: Delay[];
 };
 
+const EMPTY_DATA: DashboardData = {
+  schedules: [],
+  buses: [],
+  staff: [],
+  assignments: [],
+  trips: [],
+  delays: [],
+};
+
 export default function SupervisorDashboard() {
   const [mobileOpen, setMobileOpen] = useState(false);
-
-  const [data, setData] = useState<DashboardData>({
-    schedules: [],
-    buses: [],
-    staff: [],
-    assignments: [],
-    trips: [],
-    delays: [],
-  });
-
+  const [data, setData] = useState<DashboardData>(EMPTY_DATA);
+  const [supervisorDepotId, setSupervisorDepotId] = useState<number | null>(
+    null,
+  );
+  const [supervisorDepotName, setSupervisorDepotName] = useState("");
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
 
-  const loadDashboard = async (isRefresh = false) => {
+  const loadDashboard = useCallback(async (isRefresh = false) => {
     try {
-      if (isRefresh) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
-
       setError("");
 
+      const storedUser = localStorage.getItem("srmss_user");
+
+      if (!storedUser) {
+        throw new Error(
+          "Your login session was not found. Please log in again.",
+        );
+      }
+
+      const currentUser = JSON.parse(storedUser);
+      const depotId = Number(currentUser.depot_id ?? currentUser.depotId);
+
+      if (!Number.isInteger(depotId) || depotId <= 0) {
+        throw new Error(
+          "No depot is assigned to your account. Please contact the administrator.",
+        );
+      }
+
+      setSupervisorDepotId(depotId);
+
       const [
+        depotsResponse,
         schedulesResponse,
         busesResponse,
         usersResponse,
@@ -188,6 +202,7 @@ export default function SupervisorDashboard() {
         tripsResponse,
         delaysResponse,
       ] = await Promise.all([
+        axios.get(DEPOT_API),
         axios.get(SCHEDULE_API),
         axios.get(BUS_API),
         axios.get(USER_API),
@@ -196,260 +211,268 @@ export default function SupervisorDashboard() {
         axios.get(DELAY_API),
       ]);
 
-      const schedules = extractArray<Schedule>(
-        schedulesResponse.data
+      const depots = extractArray<Depot>(depotsResponse.data);
+      const allSchedules = extractArray<Schedule>(schedulesResponse.data);
+      const allBuses = extractArray<Bus>(busesResponse.data);
+      const allUsers = extractArray<OperationalStaff>(usersResponse.data);
+      const allAssignments = extractArray<Assignment>(assignmentsResponse.data);
+      const allTrips = extractArray<Trip>(tripsResponse.data);
+      const allDelays = extractArray<Delay>(delaysResponse.data);
+
+      const depot = depots.find((item) => Number(item.id) === depotId);
+
+      setSupervisorDepotName(
+        depot?.name ||
+          currentUser.depot_name ||
+          currentUser.depotName ||
+          `Depot #${depotId}`,
       );
 
-      const buses = extractArray<Bus>(
-        busesResponse.data
+      // Buses belonging to this depot.
+      const depotBuses = allBuses.filter(
+        (bus) => Number(bus.depot_id) === depotId,
+      );
+      const depotBusIds = new Set(depotBuses.map((bus) => Number(bus.id)));
+
+      // Operational staff belonging to this depot.
+      const depotStaff = allUsers.filter((user) => {
+        const role = String(user.role || "")
+          .toUpperCase()
+          .replace(/[\s-]+/g, "_");
+
+        return (
+          ["OPERATIONAL_STAFF", "OPERATIONAL"].includes(role) &&
+          Number(user.depot_id) === depotId
+        );
+      });
+      const depotStaffIds = new Set(
+        depotStaff.map((staff) => Number(staff.id)),
       );
 
-      const users = extractArray<OperationalStaff>(
-        usersResponse.data
+      // Resolve assignments through their depot, bus, or staff relationship.
+      const depotAssignments = allAssignments.filter(
+        (assignment) =>
+          Number(assignment.depot_id) === depotId ||
+          depotBusIds.has(Number(assignment.bus_id)) ||
+          depotStaffIds.has(Number(assignment.staff_id)),
       );
 
-      const assignments = extractArray<Assignment>(
-        assignmentsResponse.data
+      const depotAssignmentIds = new Set(
+        depotAssignments.map((assignment) => Number(assignment.id)),
+      );
+      const depotScheduleIds = new Set(
+        depotAssignments.map((assignment) => Number(assignment.schedule_id)),
       );
 
-      const trips = extractArray<Trip>(
-        tripsResponse.data
+      const depotSchedules = allSchedules.filter(
+        (schedule) =>
+          Number(schedule.depot_id) === depotId ||
+          depotScheduleIds.has(Number(schedule.id)),
+      );
+      const depotScheduleIdsSet = new Set(
+        depotSchedules.map((schedule) => Number(schedule.id)),
       );
 
-      const delays = extractArray<Delay>(
-        delaysResponse.data
+      // Resolve trips through their depot, bus, assignment, or schedule.
+      const depotTrips = allTrips.filter(
+        (trip) =>
+          Number(trip.depot_id) === depotId ||
+          depotBusIds.has(Number(trip.bus_id)) ||
+          depotAssignmentIds.has(Number(trip.assignment_id)) ||
+          depotScheduleIdsSet.has(Number(trip.schedule_id)),
       );
+      const depotTripIds = new Set(depotTrips.map((trip) => Number(trip.id)));
 
-      const operationalStaff = users.filter(
-        (user) =>
-          String(user.role || "").toUpperCase() ===
-          "OPERATIONAL_STAFF"
+      const depotDelays = allDelays.filter(
+        (delay) =>
+          Number(delay.depot_id) === depotId ||
+          depotTripIds.has(Number(delay.trip_id)),
       );
 
       setData({
-        schedules,
-        buses,
-        staff: operationalStaff,
-        assignments,
-        trips,
-        delays,
+        schedules: depotSchedules,
+        buses: depotBuses,
+        staff: depotStaff,
+        assignments: depotAssignments,
+        trips: depotTrips,
+        delays: depotDelays,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Supervisor dashboard error:", err);
 
-      setError(
-        err?.response?.data?.message ||
-          "Unable to load dashboard information."
-      );
+      if (axios.isAxiosError(err)) {
+        setError(
+          err.response?.data?.message ||
+            "Unable to load dashboard information. Check that your backend APIs are running.",
+        );
+      } else {
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Unable to load dashboard information.",
+        );
+      }
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    loadDashboard();
-  }, []);
+    void loadDashboard();
+  }, [loadDashboard]);
 
   const today = getTodayDate();
 
-  const todaySchedules = useMemo(() => {
-    return data.schedules.filter((schedule) => {
-      if (!schedule.service_date) return false;
+  const todaySchedules = useMemo(
+    () =>
+      data.schedules.filter(
+        (schedule) =>
+          schedule.service_date &&
+          normalizeDate(schedule.service_date) === today,
+      ),
+    [data.schedules, today],
+  );
 
-      return normalizeDate(schedule.service_date) === today;
-    });
-  }, [data.schedules, today]);
+  const todayTrips = useMemo(
+    () =>
+      data.trips.filter((trip) => {
+        const date = getTripDate(trip) || getScheduleDate(trip, data.schedules);
 
-  const todayTrips = useMemo(() => {
-    return data.trips.filter((trip) => {
-      const date =
-        getTripDate(trip) ||
-        getScheduleDate(trip, data.schedules);
+        return date ? normalizeDate(date) === today : true;
+      }),
+    [data.trips, data.schedules, today],
+  );
 
-      return !date || normalizeDate(date) === today;
-    });
-  }, [data.trips, data.schedules, today]);
+  const activeTrips = useMemo(
+    () =>
+      todayTrips.filter((trip) =>
+        ["RUNNING", "IN_PROGRESS", "ONGOING", "STARTED", "DELAYED"].includes(
+          normalizeStatus(trip.status),
+        ),
+      ),
+    [todayTrips],
+  );
 
-  const activeTrips = useMemo(() => {
-    return todayTrips.filter((trip) => {
-      const status = String(
-        trip.status || ""
-      ).toUpperCase();
+  const availableBuses = useMemo(
+    () =>
+      data.buses.filter((bus) =>
+        ["AVAILABLE", "ACTIVE", "READY"].includes(normalizeStatus(bus.status)),
+      ),
+    [data.buses],
+  );
 
-      return [
-        "RUNNING",
-        "IN_PROGRESS",
-        "ONGOING",
-        "STARTED",
-        "DELAYED",
-      ].includes(status);
-    });
-  }, [todayTrips]);
+  const activeAssignments = useMemo(
+    () =>
+      data.assignments.filter(
+        (assignment) =>
+          !["CANCELLED", "COMPLETED", "CLOSED"].includes(
+            normalizeStatus(assignment.status),
+          ),
+      ),
+    [data.assignments],
+  );
 
-  const availableBuses = useMemo(() => {
-    return data.buses.filter((bus) => {
-      const status = String(
-        bus.status || ""
-      ).toUpperCase();
+  const assignedBusIds = useMemo(
+    () =>
+      new Set(
+        activeAssignments
+          .filter((item) => item.bus_id != null)
+          .map((item) => Number(item.bus_id)),
+      ),
+    [activeAssignments],
+  );
 
-      return [
-        "AVAILABLE",
-        "ACTIVE",
-        "READY",
-      ].includes(status);
-    });
-  }, [data.buses]);
+  const assignedStaffIds = useMemo(
+    () =>
+      new Set(
+        activeAssignments
+          .filter((item) => item.staff_id != null)
+          .map((item) => Number(item.staff_id)),
+      ),
+    [activeAssignments],
+  );
 
-  const activeAssignments = useMemo(() => {
-    return data.assignments.filter((assignment) => {
-      const status = String(
-        assignment.status || ""
-      ).toUpperCase();
+  const actuallyAvailableBuses = useMemo(
+    () => availableBuses.filter((bus) => !assignedBusIds.has(Number(bus.id))),
+    [availableBuses, assignedBusIds],
+  );
 
-      return ![
-        "CANCELLED",
-        "COMPLETED",
-        "CLOSED",
-      ].includes(status);
-    });
-  }, [data.assignments]);
+  const availableStaff = useMemo(
+    () =>
+      data.staff.filter((staff) => {
+        const status = normalizeStatus(staff.status);
+        return (
+          ["AVAILABLE", "ACTIVE", "OFF_DUTY"].includes(status) &&
+          !assignedStaffIds.has(Number(staff.id))
+        );
+      }),
+    [data.staff, assignedStaffIds],
+  );
 
-  const assignedBusIds = useMemo(() => {
-    return new Set(
-      activeAssignments.map(
-        (assignment) => Number(assignment.bus_id)
-      )
-    );
-  }, [activeAssignments]);
+  const delayedTrips = useMemo(
+    () =>
+      todayTrips.filter((trip) => normalizeStatus(trip.status) === "DELAYED"),
+    [todayTrips],
+  );
 
-  const assignedStaffIds = useMemo(() => {
-    return new Set(
-      activeAssignments.map(
-        (assignment) => Number(assignment.staff_id)
-      )
-    );
-  }, [activeAssignments]);
-
-  const actuallyAvailableBuses = useMemo(() => {
-    return availableBuses.filter(
-      (bus) => !assignedBusIds.has(Number(bus.id))
-    );
-  }, [availableBuses, assignedBusIds]);
-
-  const availableStaff = useMemo(() => {
-    return data.staff.filter((staff) => {
-      const status = String(
-        staff.status || ""
-      ).toUpperCase();
-
-      const statusAvailable = [
-        "AVAILABLE",
-        "ACTIVE",
-        "OFF_DUTY",
-      ].includes(status);
-
-      return (
-        statusAvailable &&
-        !assignedStaffIds.has(Number(staff.id))
-      );
-    });
-  }, [data.staff, assignedStaffIds]);
-
-  const delayedTrips = useMemo(() => {
-    return todayTrips.filter((trip) => {
-      const status = String(
-        trip.status || ""
-      ).toUpperCase();
-
-      return status === "DELAYED";
-    });
-  }, [todayTrips]);
-
-  const completedTrips = useMemo(() => {
-    return todayTrips.filter((trip) => {
-      const status = String(
-        trip.status || ""
-      ).toUpperCase();
-
-      return [
-        "COMPLETED",
-        "COMPLETE",
-        "FINISHED",
-      ].includes(status);
-    });
-  }, [todayTrips]);
+  const completedTrips = useMemo(
+    () =>
+      todayTrips.filter((trip) =>
+        ["COMPLETED", "COMPLETE", "FINISHED"].includes(
+          normalizeStatus(trip.status),
+        ),
+      ),
+    [todayTrips],
+  );
 
   const onTimeRate = useMemo(() => {
     if (todayTrips.length === 0) return 0;
 
-    const nonDelayed = todayTrips.filter((trip) => {
-      const status = String(
-        trip.status || ""
-      ).toUpperCase();
+    const notDelayed = todayTrips.filter(
+      (trip) => normalizeStatus(trip.status) !== "DELAYED",
+    ).length;
 
-      return ![
-        "DELAYED",
-      ].includes(status);
-    }).length;
-
-    return Math.round(
-      (nonDelayed / todayTrips.length) * 100
-    );
+    return Math.round((notDelayed / todayTrips.length) * 100);
   }, [todayTrips]);
 
   const busUtilization = useMemo(() => {
     if (data.buses.length === 0) return 0;
 
+    const assignedBuses = new Set(
+      activeAssignments
+        .filter((item) => item.bus_id != null)
+        .map((item) => Number(item.bus_id)),
+    );
+
     return Math.min(
       100,
-      Math.round(
-        (activeAssignments.filter(
-          (assignment) =>
-            assignment.bus_id !== undefined
-        ).length /
-          data.buses.length) *
-          100
-      )
+      Math.round((assignedBuses.size / data.buses.length) * 100),
     );
   }, [data.buses, activeAssignments]);
 
   const staffUtilization = useMemo(() => {
     if (data.staff.length === 0) return 0;
 
+    const assignedStaff = new Set(
+      activeAssignments
+        .filter((item) => item.staff_id != null)
+        .map((item) => Number(item.staff_id)),
+    );
+
     return Math.min(
       100,
-      Math.round(
-        (activeAssignments.filter(
-          (assignment) =>
-            assignment.staff_id !== undefined
-        ).length /
-          data.staff.length) *
-          100
-      )
+      Math.round((assignedStaff.size / data.staff.length) * 100),
     );
   }, [data.staff, activeAssignments]);
 
   const liveTrips = useMemo(() => {
-    const running = todayTrips.filter((trip) => {
-      const status = String(
-        trip.status || ""
-      ).toUpperCase();
+    const running = todayTrips.filter((trip) =>
+      ["RUNNING", "IN_PROGRESS", "ONGOING", "STARTED", "DELAYED"].includes(
+        normalizeStatus(trip.status),
+      ),
+    );
 
-      return [
-        "RUNNING",
-        "IN_PROGRESS",
-        "ONGOING",
-        "STARTED",
-        "DELAYED",
-      ].includes(status);
-    });
-
-    if (running.length > 0) {
-      return running.slice(0, 5);
-    }
-
-    return todayTrips.slice(0, 5);
+    return (running.length > 0 ? running : todayTrips).slice(0, 5);
   }, [todayTrips]);
 
   const alerts = useMemo<AlertItem[]>(() => {
@@ -459,45 +482,30 @@ export default function SupervisorDashboard() {
       result.push({
         id: `delay-${trip.id}`,
         title: "Trip delayed",
-        description:
-          getTripRoute(trip) || "Scheduled trip",
+        description: getTripRoute(trip),
         type: "warning",
       });
     });
 
     data.delays.slice(0, 2).forEach((delay) => {
-      const minutes = Number(
-        delay.delay_minutes || 0
-      );
+      const minutes = Number(delay.delay_minutes || 0);
 
       result.push({
         id: `recorded-delay-${delay.id}`,
-        title:
-          minutes > 30
-            ? "Major delay reported"
-            : "Delay reported",
+        title: minutes > 30 ? "Major delay reported" : "Delay reported",
         description:
           delay.reason ||
           delay.description ||
           "Operational delay requires attention.",
-        type:
-          minutes > 30
-            ? "danger"
-            : "warning",
+        type: minutes > 30 ? "danger" : "warning",
       });
     });
 
-    const maintenanceBuses = data.buses.filter((bus) => {
-      const status = String(
-        bus.status || ""
-      ).toUpperCase();
-
-      return [
-        "MAINTENANCE",
-        "UNDER_MAINTENANCE",
-        "SERVICE",
-      ].includes(status);
-    });
+    const maintenanceBuses = data.buses.filter((bus) =>
+      ["MAINTENANCE", "UNDER_MAINTENANCE", "SERVICE"].includes(
+        normalizeStatus(bus.status),
+      ),
+    );
 
     if (maintenanceBuses.length > 0) {
       result.push({
@@ -522,25 +530,20 @@ export default function SupervisorDashboard() {
     }
 
     return result.slice(0, 5);
-  }, [
-    delayedTrips,
-    data.delays,
-    data.buses,
-    availableStaff,
-  ]);
+  }, [delayedTrips, data.delays, data.buses, availableStaff]);
 
   const stats = [
     {
-      title: "Today's Trips",
-      value: todaySchedules.length || todayTrips.length,
+      title: "Today's Schedules",
+      value: todaySchedules.length,
       icon: FiCalendar,
-      description: "Scheduled for today",
+      description: "For your assigned depot",
     },
     {
       title: "Active Trips",
       value: activeTrips.length,
       icon: FiMapPin,
-      description: "Currently running",
+      description: "Currently running or delayed",
     },
     {
       title: "Available Buses",
@@ -564,117 +567,86 @@ export default function SupervisorDashboard() {
       />
 
       <main className="lg:pl-72">
-        {/* Top Header */}
         <header className="sticky top-0 z-30 flex h-16 items-center border-b border-slate-200 bg-white/95 px-4 backdrop-blur md:px-6">
           <button
             type="button"
             onClick={() => setMobileOpen(true)}
-            className="mr-4 rounded-lg p-2 text-slate-600 transition hover:bg-slate-100 lg:hidden"
+            className="mr-4 rounded-lg p-2 text-slate-600 hover:bg-slate-100 lg:hidden"
             aria-label="Open menu"
           >
             <FiMenu size={22} />
           </button>
 
-          <div className="flex min-w-0 items-center justify-between gap-4">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
-                Supervisor
-              </p>
-
-              <p className="font-semibold text-slate-800">
-                SRMSS Management Portal
-              </p>
-            </div>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
+              Supervisor
+            </p>
+            <p className="font-semibold text-slate-800">
+              SRMSS Management Portal
+            </p>
           </div>
-
-          <button
-            type="button"
-            onClick={() => loadDashboard(true)}
-            disabled={refreshing}
-            className="ml-auto inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 transition hover:border-red-200 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <FiRefreshCw
-              size={16}
-              className={
-                refreshing
-                  ? "animate-spin"
-                  : ""
-              }
-            />
-
-            <span className="hidden sm:inline">
-              Refresh
-            </span>
-          </button>
         </header>
 
         <div className="p-4 sm:p-6 lg:p-8">
           <div className="mx-auto max-w-7xl">
-            {/* Page Header */}
-            <div className="mb-8">
-              <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+            <section className="mb-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="h-1.5 bg-red-600" />
+              <div className="flex flex-col justify-between gap-5 p-6 md:flex-row md:items-center md:p-8">
                 <div>
-                  <p className="text-sm font-semibold text-red-600">
-                    Operations Overview
+                  <p className="text-sm font-semibold uppercase tracking-wider text-red-600">
+                    Depot Operations
                   </p>
-
                   <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">
                     Supervisor Dashboard
                   </h1>
-
-                  <p className="mt-2 text-slate-500">
-                    Monitor today's schedules, trips, buses and operational staff.
+                  <p className="mt-2 max-w-2xl text-sm text-slate-500">
+                    Monitor schedules, trips, assignments, buses and operational
+                    staff for your assigned depot.
                   </p>
                 </div>
 
-                <div
-                  className={`flex w-fit items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold ${
-                    activeTrips.length > 0
-                      ? "border border-green-100 bg-green-50 text-green-700"
-                      : "border border-slate-200 bg-white text-slate-600"
-                  }`}
-                >
-                  <span
-                    className={`h-2.5 w-2.5 rounded-full ${
-                      activeTrips.length > 0
-                        ? "bg-green-500"
-                        : "bg-slate-400"
-                    }`}
-                  />
-
-                  {activeTrips.length > 0
-                    ? "Operations Running"
-                    : "No Active Trips"}
+                <div className="flex w-full items-center gap-3 rounded-xl border border-red-100 bg-red-50 p-4 md:w-auto md:min-w-64">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white text-red-600 shadow-sm">
+                    <FiMapPin size={23} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
+                      Your Assigned Depot
+                    </p>
+                    <p className="mt-1 truncate text-lg font-bold text-slate-900">
+                      {supervisorDepotName || "Loading depot..."}
+                    </p>
+                    {supervisorDepotId !== null && (
+                      <p className="mt-0.5 text-xs text-slate-500">
+                        Depot ID: {supervisorDepotId}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
+            </section>
 
-            {/* Error */}
             {error && (
               <div className="mb-6 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
-                <FiAlertTriangle
-                  className="mt-0.5 shrink-0"
-                  size={19}
-                />
-
+                <FiAlertTriangle className="mt-0.5 shrink-0" size={19} />
                 <div>
-                  <p className="font-semibold">
-                    Dashboard data unavailable
-                  </p>
-
-                  <p className="mt-1 text-sm">
-                    {error}
-                  </p>
+                  <p className="font-semibold">Dashboard data unavailable</p>
+                  <p className="mt-1 text-sm">{error}</p>
+                  <button
+                    type="button"
+                    onClick={() => void loadDashboard(true)}
+                    className="mt-2 text-sm font-semibold underline"
+                  >
+                    Try again
+                  </button>
                 </div>
               </div>
             )}
 
-            {/* Loading */}
             {loading ? (
               <DashboardLoader />
             ) : (
               <>
-                {/* Statistics */}
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                   {stats.map((stat) => {
                     const Icon = stat.icon;
@@ -684,21 +656,18 @@ export default function SupervisorDashboard() {
                         key={stat.title}
                         className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
                       >
-                        <div className="flex items-start justify-between">
+                        <div className="flex items-start justify-between gap-3">
                           <div>
                             <p className="text-sm font-medium text-slate-500">
                               {stat.title}
                             </p>
-
                             <p className="mt-2 text-3xl font-bold text-slate-950">
                               {stat.value}
                             </p>
-
                             <p className="mt-1 text-xs text-slate-400">
                               {stat.description}
                             </p>
                           </div>
-
                           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-red-50 text-red-600">
                             <Icon size={21} />
                           </div>
@@ -708,27 +677,23 @@ export default function SupervisorDashboard() {
                   })}
                 </div>
 
-                {/* Main Content */}
+                {/* Live trips and alerts */}
                 <div className="mt-6 grid gap-6 lg:grid-cols-3">
-                  {/* Live Trips */}
-                  <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-2">
-                    <div className="flex items-center justify-between">
+                  <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 lg:col-span-2">
+                    <div className="flex items-center justify-between gap-3">
                       <div>
                         <h2 className="text-lg font-bold text-slate-900">
                           Live Trip Monitor
                         </h2>
-
                         <p className="mt-1 text-sm text-slate-500">
-                          Current scheduled and active trips
+                          Trips associated with your depot
                         </p>
                       </div>
-
                       <Link
                         href="/supervisor/trips"
-                        className="inline-flex items-center gap-1 text-sm font-semibold text-red-600 transition hover:text-red-700"
+                        className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-red-600 hover:text-red-700"
                       >
-                        View all
-                        <FiArrowRight size={15} />
+                        View all <FiArrowRight size={15} />
                       </Link>
                     </div>
 
@@ -737,13 +702,13 @@ export default function SupervisorDashboard() {
                         <EmptyState
                           icon={<FiMapPin />}
                           title="No trips available"
-                          description="There are no trips to display for today."
+                          description="No trips were found for your depot today."
                         />
                       ) : (
                         liveTrips.map((trip) => (
                           <div
                             key={trip.id}
-                            className="flex flex-col gap-4 rounded-xl border border-slate-100 p-4 transition hover:bg-slate-50 md:flex-row md:items-center"
+                            className="flex flex-col gap-3 rounded-xl border border-slate-100 p-4 transition hover:bg-slate-50 sm:flex-row sm:items-center"
                           >
                             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
                               <FiMapPin size={19} />
@@ -753,60 +718,47 @@ export default function SupervisorDashboard() {
                               <p className="font-semibold text-slate-800">
                                 {getTripRoute(trip)}
                               </p>
-
                               <p className="mt-1 text-sm text-slate-500">
                                 {trip.registration_no ||
                                   trip.bus ||
                                   "Bus not assigned"}
-
-                                <span className="mx-2 text-slate-300">
-                                  •
-                                </span>
-
-                                {trip.staff_name ||
-                                  "Staff not assigned"}
+                                <span className="mx-2 text-slate-300">•</span>
+                                {trip.staff_name || "Staff not assigned"}
+                              </p>
+                              <p className="mt-1 text-xs text-slate-400">
+                                Trip{" "}
+                                {trip.trip_no || trip.tripNo || `#${trip.id}`}
                               </p>
                             </div>
 
-                            <div className="flex items-center justify-between gap-4 md:justify-end">
+                            <div className="flex items-center justify-between gap-4 sm:justify-end">
                               <div className="text-right">
                                 <p className="text-sm font-semibold text-slate-800">
-                                  {formatTime(
-                                    trip.departure_time
-                                  )}
+                                  {formatTime(trip.departure_time)}
                                 </p>
-
                                 <p className="text-xs text-slate-400">
                                   Departure
                                 </p>
                               </div>
-
-                              <StatusBadge
-                                status={getTripStatus(
-                                  trip
-                                )}
-                              />
+                              <StatusBadge status={getTripStatus(trip)} />
                             </div>
                           </div>
                         ))
                       )}
                     </div>
-                  </div>
+                  </section>
 
-                  {/* Alerts */}
-                  <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                  <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
                     <div className="flex items-center gap-3">
                       <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
                         <FiAlertTriangle size={19} />
                       </div>
-
                       <div>
                         <h2 className="font-bold text-slate-900">
                           Operational Alerts
                         </h2>
-
                         <p className="text-xs text-slate-500">
-                          Requires attention
+                          Your depot requires attention
                         </p>
                       </div>
                     </div>
@@ -819,14 +771,12 @@ export default function SupervisorDashboard() {
                               className="mt-0.5 shrink-0 text-green-600"
                               size={18}
                             />
-
                             <div>
                               <p className="text-sm font-semibold text-green-800">
                                 No operational alerts
                               </p>
-
                               <p className="mt-1 text-xs text-green-700">
-                                Current operations require no immediate attention.
+                                No current issues have been reported.
                               </p>
                             </div>
                           </div>
@@ -847,13 +797,12 @@ export default function SupervisorDashboard() {
                       href="/supervisor/delays"
                       className="mt-5 flex items-center justify-center gap-2 rounded-xl border border-slate-200 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                     >
-                      Manage Delays
-                      <FiArrowRight size={17} />
+                      Manage Delays <FiArrowRight size={17} />
                     </Link>
-                  </div>
+                  </section>
                 </div>
 
-                {/* Resource Overview */}
+                {/* Utilization */}
                 <div className="mt-6 grid gap-6 md:grid-cols-3">
                   <ResourceCard
                     title="Bus Utilization"
@@ -861,14 +810,12 @@ export default function SupervisorDashboard() {
                     progress={busUtilization}
                     icon={<FiTruck />}
                   />
-
                   <ResourceCard
                     title="Staff Utilization"
                     value={`${staffUtilization}%`}
                     progress={staffUtilization}
                     icon={<FiUsers />}
                   />
-
                   <ResourceCard
                     title="On-Time Performance"
                     value={`${onTimeRate}%`}
@@ -877,7 +824,7 @@ export default function SupervisorDashboard() {
                   />
                 </div>
 
-                {/* Today's Summary */}
+                {/* Today's summary */}
                 <div className="mt-6 grid gap-6 md:grid-cols-3">
                   <SummaryCard
                     title="Completed Trips"
@@ -886,15 +833,13 @@ export default function SupervisorDashboard() {
                     icon={<FiCheckCircle />}
                     iconClass="bg-green-50 text-green-600"
                   />
-
                   <SummaryCard
                     title="Delayed Trips"
                     value={delayedTrips.length}
-                    description="Trips currently delayed"
+                    description="Trips delayed today"
                     icon={<FiAlertTriangle />}
                     iconClass="bg-amber-50 text-amber-600"
                   />
-
                   <SummaryCard
                     title="Active Assignments"
                     value={activeAssignments.length}
@@ -904,48 +849,73 @@ export default function SupervisorDashboard() {
                   />
                 </div>
 
-                {/* Quick Actions */}
-                <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                {/* Depot resource counts */}
+                <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
                   <div>
                     <h2 className="text-lg font-bold text-slate-900">
-                      Quick Operations
+                      Depot Resource Overview
                     </h2>
-
                     <p className="mt-1 text-sm text-slate-500">
-                      Quickly access common supervisor tasks.
+                      Resources assigned to{" "}
+                      {supervisorDepotName || "your depot"}.
                     </p>
                   </div>
+
+                  <div className="mt-5 grid gap-4 sm:grid-cols-3">
+                    <ResourceCount
+                      label="Total Buses"
+                      value={data.buses.length}
+                      icon={<FiTruck />}
+                    />
+                    <ResourceCount
+                      label="Operational Staff"
+                      value={data.staff.length}
+                      icon={<FiUsers />}
+                    />
+                    <ResourceCount
+                      label="Total Assignments"
+                      value={data.assignments.length}
+                      icon={<FiUserCheck />}
+                    />
+                  </div>
+                </section>
+
+                {/* Quick actions */}
+                <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                  <h2 className="text-lg font-bold text-slate-900">
+                    Quick Operations
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Access common tasks for your assigned depot.
+                  </p>
 
                   <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     <QuickAction
                       href="/supervisor/schedules"
                       icon={<FiCalendar />}
                       title="Schedules"
-                      description="View today's schedules"
+                      description="View depot schedules"
                     />
-
                     <QuickAction
                       href="/supervisor/assignments"
                       icon={<FiTruck />}
                       title="Assignments"
                       description="Assign buses and staff"
                     />
-
                     <QuickAction
                       href="/supervisor/trips"
                       icon={<FiMapPin />}
                       title="Trip Monitoring"
-                      description="Monitor active trips"
+                      description="Monitor depot trips"
                     />
-
                     <QuickAction
                       href="/supervisor/delays"
                       icon={<FiClock />}
                       title="Delays"
-                      description="Review operational delays"
+                      description="Review reported delays"
                     />
                   </div>
-                </div>
+                </section>
               </>
             )}
           </div>
@@ -955,25 +925,25 @@ export default function SupervisorDashboard() {
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/* Helpers                                                                    */
-/* -------------------------------------------------------------------------- */
+/* Helpers */
 
-function extractArray<T>(response: any): T[] {
-  if (Array.isArray(response)) {
-    return response;
-  }
+function extractArray<T>(response: unknown): T[] {
+  if (Array.isArray(response)) return response as T[];
 
-  if (Array.isArray(response?.data)) {
-    return response.data;
-  }
+  if (response && typeof response === "object") {
+    const value = response as {
+      data?: unknown;
+      results?: unknown;
+    };
 
-  if (Array.isArray(response?.data?.data)) {
-    return response.data.data;
-  }
+    if (Array.isArray(value.data)) return value.data as T[];
 
-  if (Array.isArray(response?.results)) {
-    return response.results;
+    if (value.data && typeof value.data === "object") {
+      const nested = value.data as { data?: unknown };
+      if (Array.isArray(nested.data)) return nested.data as T[];
+    }
+
+    if (Array.isArray(value.results)) return value.results as T[];
   }
 
   return [];
@@ -981,90 +951,53 @@ function extractArray<T>(response: any): T[] {
 
 function getTodayDate() {
   const now = new Date();
-
   const year = now.getFullYear();
-  const month = String(
-    now.getMonth() + 1
-  ).padStart(2, "0");
-  const day = String(
-    now.getDate()
-  ).padStart(2, "0");
-
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
 
 function normalizeDate(value?: string) {
-  if (!value) return "";
+  return value ? String(value).substring(0, 10) : "";
+}
 
-  return String(value).substring(0, 10);
+function normalizeStatus(value?: string) {
+  return String(value || "")
+    .trim()
+    .toUpperCase()
+    .replace(/[\s-]+/g, "_");
 }
 
 function getTripDate(trip: Trip) {
-  const possibleDates = [
-    trip.actual_start_time,
-    trip.departure_time,
-  ];
-
-  for (const value of possibleDates) {
-    if (
-      value &&
-      /^\d{4}-\d{2}-\d{2}/.test(value)
-    ) {
-      return value;
-    }
+  for (const value of [trip.actual_start_time, trip.departure_time]) {
+    if (value && /^\d{4}-\d{2}-\d{2}/.test(value)) return value;
   }
-
   return undefined;
 }
 
-function getScheduleDate(
-  trip: Trip,
-  schedules: Schedule[]
-) {
+function getScheduleDate(trip: Trip, schedules: Schedule[]) {
   if (!trip.schedule_id) return undefined;
 
-  const schedule = schedules.find(
-    (item) =>
-      Number(item.id) ===
-      Number(trip.schedule_id)
-  );
-
-  return schedule?.service_date;
+  return schedules.find(
+    (schedule) => Number(schedule.id) === Number(trip.schedule_id),
+  )?.service_date;
 }
 
 function getTripRoute(trip: Trip) {
-  if (
-    trip.start_point &&
-    trip.end_point
-  ) {
+  if (trip.start_point && trip.end_point) {
     return `${trip.start_point} → ${trip.end_point}`;
   }
-
-  if (trip.route_name) {
-    return trip.route_name;
-  }
-
-  if (trip.route_code) {
-    return trip.route_code;
-  }
-
-  return "Route not available";
+  return trip.route_name || trip.route_code || "Route not available";
 }
 
 function formatTime(value?: string) {
   if (!value) return "--:--";
 
   const text = String(value);
-
-  if (/^\d{2}:\d{2}/.test(text)) {
-    return text.substring(0, 5);
-  }
+  if (/^\d{2}:\d{2}/.test(text)) return text.substring(0, 5);
 
   const date = new Date(text);
-
-  if (Number.isNaN(date.getTime())) {
-    return "--:--";
-  }
+  if (Number.isNaN(date.getTime())) return "--:--";
 
   return date.toLocaleTimeString("en-LK", {
     hour: "2-digit",
@@ -1074,86 +1007,64 @@ function formatTime(value?: string) {
 }
 
 function getTripStatus(
-  trip: Trip
-): "ON TIME" | "DELAYED" | "RUNNING" {
-  const status = String(
-    trip.status || ""
-  ).toUpperCase();
+  trip: Trip,
+): "ON TIME" | "DELAYED" | "RUNNING" | "COMPLETED" | "SCHEDULED" {
+  const status = normalizeStatus(trip.status);
 
-  if (
-    [
-      "DELAYED",
-      "DELAY",
-    ].includes(status)
-  ) {
-    return "DELAYED";
-  }
-
-  if (
-    [
-      "RUNNING",
-      "IN_PROGRESS",
-      "ONGOING",
-      "STARTED",
-    ].includes(status)
-  ) {
+  if (["DELAYED", "DELAY"].includes(status)) return "DELAYED";
+  if (["RUNNING", "IN_PROGRESS", "ONGOING", "STARTED"].includes(status)) {
     return "RUNNING";
+  }
+  if (["COMPLETED", "COMPLETE", "FINISHED"].includes(status)) {
+    return "COMPLETED";
+  }
+  if (["SCHEDULED", "PENDING", "PLANNED"].includes(status)) {
+    return "SCHEDULED";
   }
 
   return "ON TIME";
 }
 
-/* -------------------------------------------------------------------------- */
-/* Loading                                                                    */
-/* -------------------------------------------------------------------------- */
+/* Loading */
 
 function DashboardLoader() {
   return (
-    <div className="flex min-h-[400px] items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div className="flex min-h-[350px] items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="flex flex-col items-center gap-3">
-        <FiLoader
-          size={30}
-          className="animate-spin text-red-600"
-        />
-
+        <FiLoader size={30} className="animate-spin text-red-600" />
         <p className="text-sm font-medium text-slate-500">
-          Loading supervisor dashboard...
+          Loading your depot dashboard...
         </p>
       </div>
     </div>
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/* Status Badge                                                               */
-/* -------------------------------------------------------------------------- */
+/* Status badge */
 
 function StatusBadge({
   status,
 }: {
-  status: "ON TIME" | "DELAYED" | "RUNNING";
+  status: "ON TIME" | "DELAYED" | "RUNNING" | "COMPLETED" | "SCHEDULED";
 }) {
-  const styles: Record<
-    "ON TIME" | "DELAYED" | "RUNNING",
-    string
-  > = {
+  const styles: Record<typeof status, string> = {
     "ON TIME": "bg-green-50 text-green-700",
     DELAYED: "bg-amber-50 text-amber-700",
     RUNNING: "bg-blue-50 text-blue-700",
+    COMPLETED: "bg-slate-100 text-slate-700",
+    SCHEDULED: "bg-violet-50 text-violet-700",
   };
 
   return (
     <span
-      className={`rounded-full px-3 py-1 text-xs font-bold ${styles[status]}`}
+      className={`whitespace-nowrap rounded-full px-3 py-1 text-xs font-bold ${styles[status]}`}
     >
       {status}
     </span>
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/* Alert                                                                      */
-/* -------------------------------------------------------------------------- */
+/* Alert */
 
 function Alert({
   title,
@@ -1182,13 +1093,9 @@ function Alert({
             <FiAlertTriangle size={16} />
           )}
         </div>
-
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-slate-800">
-            {title}
-          </p>
-
-          <p className="mt-1 truncate text-xs text-slate-500">
+          <p className="text-sm font-semibold text-slate-800">{title}</p>
+          <p className="mt-1 break-words text-xs text-slate-500">
             {description}
           </p>
         </div>
@@ -1197,9 +1104,7 @@ function Alert({
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/* Resource Card                                                               */
-/* -------------------------------------------------------------------------- */
+/* Resource card */
 
 function ResourceCard({
   title,
@@ -1210,7 +1115,7 @@ function ResourceCard({
   title: string;
   value: string;
   progress: number;
-  icon: React.ReactNode;
+  icon: ReactNode;
 }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -1219,35 +1124,20 @@ function ResourceCard({
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 text-red-600">
             {icon}
           </div>
-
-          <p className="text-sm font-semibold text-slate-700">
-            {title}
-          </p>
+          <p className="text-sm font-semibold text-slate-700">{title}</p>
         </div>
-
-        <span className="font-bold text-slate-900">
-          {value}
-        </span>
+        <span className="font-bold text-slate-900">{value}</span>
       </div>
-
       <div className="mt-5 h-2 overflow-hidden rounded-full bg-slate-100">
         <div
           className="h-full rounded-full bg-red-600 transition-all"
-          style={{
-            width: `${Math.min(
-              100,
-              Math.max(0, progress)
-            )}%`,
-          }}
+          style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
         />
       </div>
     </div>
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/* Summary Card                                                                */
-/* -------------------------------------------------------------------------- */
 
 function SummaryCard({
   title,
@@ -1259,7 +1149,7 @@ function SummaryCard({
   title: string;
   value: number;
   description: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
   iconClass: string;
 }) {
   return (
@@ -1270,35 +1160,47 @@ function SummaryCard({
         >
           {icon}
         </div>
-
         <div>
-          <p className="text-sm font-medium text-slate-500">
-            {title}
-          </p>
-
-          <p className="mt-1 text-2xl font-bold text-slate-950">
-            {value}
-          </p>
-
-          <p className="mt-1 text-xs text-slate-400">
-            {description}
-          </p>
+          <p className="text-sm font-medium text-slate-500">{title}</p>
+          <p className="mt-1 text-2xl font-bold text-slate-950">{value}</p>
+          <p className="mt-1 text-xs text-slate-400">{description}</p>
         </div>
       </div>
     </div>
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/* Empty State                                                                 */
-/* -------------------------------------------------------------------------- */
+
+function ResourceCount({
+  label,
+  value,
+  icon,
+}: {
+  label: string;
+  value: number;
+  icon: ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-slate-100 p-4">
+      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+        {icon}
+      </div>
+      <div>
+        <p className="text-sm text-slate-500">{label}</p>
+        <p className="text-xl font-bold text-slate-900">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+
 
 function EmptyState({
   icon,
   title,
   description,
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   title: string;
   description: string;
 }) {
@@ -1307,21 +1209,12 @@ function EmptyState({
       <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 text-slate-400">
         {icon}
       </div>
-
-      <p className="mt-3 text-sm font-semibold text-slate-700">
-        {title}
-      </p>
-
-      <p className="mt-1 text-xs text-slate-400">
-        {description}
-      </p>
+      <p className="mt-3 text-sm font-semibold text-slate-700">{title}</p>
+      <p className="mt-1 text-xs text-slate-400">{description}</p>
     </div>
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/* Quick Action                                                                */
-/* -------------------------------------------------------------------------- */
 
 function QuickAction({
   href,
@@ -1330,7 +1223,7 @@ function QuickAction({
   description,
 }: {
   href: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
   title: string;
   description: string;
 }) {
@@ -1340,21 +1233,14 @@ function QuickAction({
       className="group rounded-xl border border-slate-200 p-4 transition hover:border-red-200 hover:bg-red-50/40"
     >
       <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 text-red-600 transition group-hover:bg-red-600 group-hover:text-white">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600 transition group-hover:bg-red-600 group-hover:text-white">
           {icon}
         </div>
-
         <div>
-          <p className="text-sm font-semibold text-slate-800">
-            {title}
-          </p>
-
-          <p className="mt-1 text-xs text-slate-500">
-            {description}
-          </p>
+          <p className="text-sm font-semibold text-slate-800">{title}</p>
+          <p className="mt-1 text-xs text-slate-500">{description}</p>
         </div>
       </div>
     </Link>
   );
 }
-

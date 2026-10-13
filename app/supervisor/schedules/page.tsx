@@ -241,18 +241,27 @@ const formatDate = (date: string) => {
       />
 
       <div className="lg:ml-72">
-        {/* HEADER */}
+       <header className="sticky top-0 z-30 flex h-16 items-center border-b border-slate-200 bg-white/95 px-4 backdrop-blur md:px-6">
+          <button
+            type="button"
+            onClick={() => setMobileOpen(true)}
+            className="mr-4 rounded-lg p-2 text-slate-600 hover:bg-slate-100 lg:hidden"
+            aria-label="Open menu"
+          >
+            <FiMenu size={22} />
+          </button>
 
-        <header className="sticky top-0 z-30 border-b bg-white">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
+              Supervisor Portal
+            </p>
+            <p className="font-semibold text-slate-800">
+              SRMSS Management Portal
+            </p>
+          </div>
+        </header>
           <div className="flex h-16 items-center justify-between px-4 sm:px-6">
             <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setMobileOpen(true)}
-                className="rounded-lg p-2 text-gray-600 hover:bg-gray-100 lg:hidden"
-              >
-                <FiMenu size={22} />
-              </button>
 
               <div>
                 <h1 className="text-xl font-bold text-gray-900">
@@ -276,7 +285,6 @@ const formatDate = (date: string) => {
               <span className="hidden sm:inline">Refresh</span>
             </button>
           </div>
-        </header>
 
         <main className="p-4 sm:p-6">
           {/* ERROR */}

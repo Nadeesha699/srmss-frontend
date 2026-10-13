@@ -248,7 +248,25 @@ export default function SupervisorFuelRecordsPage() {
       />
 
       <main className="min-w-0 lg:ml-72">
-        <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
+        <header className="sticky top-0 z-30 flex h-16 items-center border-b border-slate-200 bg-white/95 px-4 backdrop-blur md:px-6">
+          <button
+            type="button"
+            onClick={() => setMobileOpen(true)}
+            className="mr-4 rounded-lg p-2 text-slate-600 hover:bg-slate-100 lg:hidden"
+            aria-label="Open menu"
+          >
+            <FiMenu size={22} />
+          </button>
+
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
+              Supervisor Portal
+            </p>
+            <p className="font-semibold text-slate-800">
+              SRMSS Management Portal
+            </p>
+          </div>
+        </header>
           <div className="flex items-center justify-between gap-3 px-4 py-4 sm:px-6 lg:px-8">
             <div className="flex items-center gap-3">
               <button
@@ -285,7 +303,6 @@ export default function SupervisorFuelRecordsPage() {
               <span className="hidden sm:inline">Refresh</span>
             </button>
           </div>
-        </header>
 
         <div className="p-4 sm:p-6 lg:p-8">
           {error && (

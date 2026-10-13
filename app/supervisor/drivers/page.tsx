@@ -236,19 +236,27 @@ export default function SupervisorDriversPage() {
             type="button"
             onClick={() => setMobileOpen(true)}
             className="mr-4 rounded-lg p-2 text-slate-600 hover:bg-slate-100 lg:hidden"
-            aria-label="Open navigation"
+            aria-label="Open menu"
           >
             <FiMenu size={22} />
           </button>
 
           <div>
             <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
-              Depot Supervisor
+              Supervisor Portal
             </p>
             <p className="font-semibold text-slate-800">
               SRMSS Management Portal
             </p>
           </div>
+           <button
+            onClick={fetchDrivers}
+            disabled={loading}
+            className="ml-auto inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+          >
+            <FiRefreshCw className={loading ? "animate-spin" : ""} />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
         </header>
 
         <main className="p-4 md:p-6 lg:p-8">
@@ -273,19 +281,6 @@ export default function SupervisorDriversPage() {
                   {depotName} · View drivers assigned to your depot
                 </p>
               </div>
-
-              <button
-                type="button"
-                onClick={() => void fetchDrivers()}
-                disabled={loading}
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-60"
-              >
-                <FiRefreshCw
-                  size={17}
-                  className={loading ? "animate-spin" : ""}
-                />
-                Refresh
-              </button>
             </div>
 
             {error && (

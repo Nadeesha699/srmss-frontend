@@ -3,362 +3,242 @@
 
 import { AdminSidebar } from "@/components/SideNavBar/AdminSideNavBar";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
+import type { ElementType, ReactNode } from "react";
 import {
+  FiActivity,
+  FiAlertCircle,
   FiArrowRight,
+  FiBarChart2,
+  FiBriefcase,
   FiCalendar,
+  FiCheckCircle,
   FiClock,
+  FiFileText,
   FiMap,
   FiMenu,
+  FiRefreshCw,
   FiTruck,
   FiUserCheck,
   FiUsers,
   FiX,
-  FiRefreshCw,
-  FiLoader,
-  FiAlertCircle,
-  FiCheckCircle,
 } from "react-icons/fi";
 
-/* =========================================================
-   API
-========================================================= */
+const API = "http://localhost:5000/api";
 
-const USERS_API = "http://localhost:5000/api/users";
-const BUSES_API = "http://localhost:5000/api/buses";
-const ROUTES_API = "http://localhost:5000/api/routes";
-const SCHEDULES_API = "http://localhost:5000/api/schedules";
-
-/* =========================================================
-   TYPES
-========================================================= */
-
-type User = {
+type RecordItem = {
   id: number;
   name?: string;
   email?: string;
   role?: string;
   status?: string;
-};
-
-type Bus = {
-  id: number;
-  registration_no?: string;
-  status?: string;
-};
-
-type OperationalStaff = {
-  id: number;
-  name?: string;
-  email?: string;
-  role?: string;
-  status?: string;
-};
-
-type Route = {
-  id: number;
-  route_code?: string;
-  name?: string;
-  route_name?: string;
-  start_point?: string;
-  end_point?: string;
-  status?: string;
-};
-
-type ScheduleStatus =
-  | "SCHEDULED"
-  | "RUNNING"
-  | "COMPLETED"
-  | "CANCELLED";
-
-type Schedule = {
-  id: number;
-  schedule_code?: string;
-
-  route_id?: number;
-  route_code?: string;
-  route_name?: string;
-  name?: string;
-  start_point?: string;
-  end_point?: string;
-
-  bus_id?: number | null;
-  registration_no?: string | null;
-
-  staff_id?: number | null;
-  staff_name?: string | null;
-
-  // Legacy backend support
-  driver_id?: number | null;
-  driver_name?: string | null;
-
   depot_id?: number | null;
-  depot_name?: string | null;
-
+  depot_name?: string;
+  manager_id?: number | null;
+  registration_no?: string;
+  route_code?: string;
+  route_name?: string;
+  start_point?: string;
+  end_point?: string;
+  route_id?: number;
+  bus_id?: number | null;
+  driver_id?: number | null;
+  staff_id?: number | null;
+  staff_name?: string;
+  driver_name?: string;
   service_date?: string;
   departure_time?: string;
-  arrival_time?: string;
-
-  status?: ScheduleStatus | string;
+  status_code?: string;
 };
 
-/* =========================================================
-   RESPONSE HELPER
-========================================================= */
+type Schedule = RecordItem & {
+  status?: string;
+};
 
-function extractData(response: any) {
-  return (
-    response?.data?.data ??
-    response?.data?.users ??
-    response?.data?.buses ??
-    response?.data?.drivers ??
-    response?.data?.routes ??
-    response?.data?.schedules ??
-    response?.data ??
-    []
-  );
+function getArray(response: any): RecordItem[] {
+  const body = response?.data;
+
+  const data =
+    body?.data ??
+    body?.depots ??
+    body?.users ??
+    body?.buses ??
+    body?.drivers ??
+    body?.routes ??
+    body?.schedules ??
+    body;
+
+  return Array.isArray(data) ? data : [];
 }
 
-/* =========================================================
-   DATE HELPERS
-========================================================= */
+function statusOf(item: RecordItem) {
+  return (item.status || "").toUpperCase();
+}
 
-function getTodayDate() {
-  const today = new Date();
-
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, "0");
-  const day = String(today.getDate()).padStart(2, "0");
+function todayString() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
 
   return `${year}-${month}-${day}`;
 }
 
-function formatTime(time?: string) {
-  if (!time) return "-";
+function formatTime(value?: string) {
+  if (!value) return "—";
 
-  const parts = time.split(":");
+  const match = value.match(/^(\d{1,2}):(\d{2})/);
 
-  if (parts.length < 2) {
-    return time;
-  }
+  if (!match) return value;
 
-  const hour = Number(parts[0]);
-  const minute = parts[1];
-
-  if (Number.isNaN(hour)) {
-    return time;
-  }
-
+  const hour = Number(match[1]);
   const suffix = hour >= 12 ? "PM" : "AM";
-  const displayHour = hour % 12 || 12;
 
-  return `${displayHour}:${minute} ${suffix}`;
+  return `${hour % 12 || 12}:${match[2]} ${suffix}`;
 }
 
-/* =========================================================
-   DASHBOARD
-========================================================= */
+function displayStatus(status?: string) {
+  const normalized = (status || "SCHEDULED").toUpperCase();
+
+  const styles: Record<string, string> = {
+    SCHEDULED: "bg-blue-50 text-blue-700",
+    RUNNING: "bg-amber-50 text-amber-700",
+    COMPLETED: "bg-emerald-50 text-emerald-700",
+    CANCELLED: "bg-red-50 text-red-700",
+  };
+
+  return {
+    label:
+      normalized.charAt(0) +
+      normalized.slice(1).toLowerCase(),
+    className:
+      styles[normalized] || "bg-slate-100 text-slate-600",
+  };
+}
 
 export default function DashboardPage() {
   const [mobileOpen, setMobileOpen] = useState(false);
-
-  const [users, setUsers] = useState<User[]>([]);
-  const [buses, setBuses] = useState<Bus[]>([]);
-  const [staff, setStaff] = useState<OperationalStaff[]>([]);
-  const [routes, setRoutes] = useState<Route[]>([]);
-  const [schedules, setSchedules] = useState<Schedule[]>([]);
-
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
 
-  /* =======================================================
-     LOAD DASHBOARD DATA
-  ======================================================= */
+  const [depots, setDepots] = useState<RecordItem[]>([]);
+  const [users, setUsers] = useState<RecordItem[]>([]);
+  const [buses, setBuses] = useState<RecordItem[]>([]);
+  const [drivers, setDrivers] = useState<RecordItem[]>([]);
+  const [routes, setRoutes] = useState<RecordItem[]>([]);
+  const [schedules, setSchedules] = useState<Schedule[]>([]);
 
-  const loadDashboard = async () => {
-    try {
-      setError("");
+  const loadDashboard = useCallback(async () => {
+    setError("");
 
-      const [
-        usersResponse,
-        busesResponse,
-        routesResponse,
-        schedulesResponse,
-      ] = await Promise.all([
-        axios.get(USERS_API),
-        axios.get(BUSES_API),
-        axios.get(ROUTES_API),
-        axios.get(SCHEDULES_API),
-      ]);
+    const endpoints = [
+      { url: `${API}/depots`, set: setDepots },
+      { url: `${API}/users`, set: setUsers },
+      { url: `${API}/buses`, set: setBuses },
+      { url: `${API}/drivers`, set: setDrivers },
+      { url: `${API}/routes`, set: setRoutes },
+      { url: `${API}/schedules`, set: setSchedules },
+    ] as const;
 
-      const usersData = extractData(usersResponse);
-      const busesData = extractData(busesResponse);
-      const routesData = extractData(routesResponse);
-      const schedulesData = extractData(schedulesResponse);
+    const results = await Promise.allSettled(
+      endpoints.map((item) => axios.get(item.url))
+    );
 
-      setUsers(Array.isArray(usersData) ? usersData : []);
-      setBuses(Array.isArray(busesData) ? busesData : []);
-      setRoutes(Array.isArray(routesData) ? routesData : []);
-      setSchedules(
-        Array.isArray(schedulesData) ? schedulesData : []
-      );
-    } catch (err) {
-      console.error("Dashboard loading error:", err);
+    let failures = 0;
 
+    results.forEach((result, index) => {
+      if (result.status === "fulfilled") {
+        endpoints[index].set(getArray(result.value));
+      } else {
+        failures++;
+        console.error(
+          `Failed to load ${endpoints[index].url}`,
+          result.reason
+        );
+      }
+    });
+
+    if (failures > 0) {
       setError(
-        "Unable to load dashboard data. Please check that the backend API is running."
+        `${failures} data source(s) could not be loaded. Check the corresponding backend API endpoints.`
       );
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
     }
-  };
 
-  useEffect(() => {
-    loadDashboard();
+    setLoading(false);
   }, []);
 
-  /* =======================================================
-     REFRESH
-  ======================================================= */
+  useEffect(() => {
+    void loadDashboard();
+  }, [loadDashboard]);
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await loadDashboard();
-  };
-
-  /* =======================================================
-     TODAY'S SCHEDULES
-  ======================================================= */
-
-  const todaysSchedules = useMemo(() => {
-    const today = getTodayDate();
-
+  const todaySchedules = useMemo(() => {
     return schedules
-      .filter((schedule) => {
-        if (!schedule.service_date) {
-          return false;
-        }
-
-        return schedule.service_date.slice(0, 10) === today;
-      })
-      .sort((a, b) => {
-        return (
-          (a.departure_time || "").localeCompare(
-            b.departure_time || ""
-          )
-        );
-      });
+      .filter(
+        (item) =>
+          item.service_date?.slice(0, 10) === todayString()
+      )
+      .sort((a, b) =>
+        (a.departure_time || "").localeCompare(
+          b.departure_time || ""
+        )
+      );
   }, [schedules]);
 
-  /* =======================================================
-     STATS
-  ======================================================= */
+  const activeDepots = depots.filter(
+    (item) => statusOf(item) === "ACTIVE"
+  ).length;
 
-  const totalUsers = users.length;
+  const activeUsers = users.filter(
+    (item) => statusOf(item) === "ACTIVE"
+  ).length;
 
-  const totalBuses = buses.length;
+  const supervisors = users.filter(
+    (item) => item.role?.toUpperCase() === "SUPERVISOR"
+  );
 
-  const totalRoutes = routes.length;
+  const operationalStaff = users.filter((item) =>
+    ["OPERATIONAL_STAFF", "OPERATIONAL STAFF"].includes(
+      item.role?.toUpperCase() || ""
+    )
+  );
 
-  const totalStaff = staff.length;
+  const availableBuses = buses.filter((item) =>
+    ["AVAILABLE", "ACTIVE", "OPERATIONAL"].includes(
+      statusOf(item)
+    )
+  ).length;
 
-  const activeBuses = buses.filter((bus) => {
-    const status = bus.status?.toUpperCase();
+  const assignedBuses = buses.filter(
+    (item) => statusOf(item) === "ASSIGNED"
+  ).length;
 
-    return (
-      status === "ACTIVE" ||
-      status === "AVAILABLE" ||
-      status === "OPERATIONAL"
-    );
-  }).length;
+  const maintenanceBuses = buses.filter(
+    (item) => statusOf(item) === "MAINTENANCE"
+  ).length;
 
-  const maintenanceBuses = buses.filter((bus) => {
-    return bus.status?.toUpperCase() === "MAINTENANCE";
-  }).length;
+  const inactiveBuses = buses.filter((item) =>
+    ["INACTIVE", "OUT_OF_SERVICE"].includes(statusOf(item))
+  ).length;
 
-  const inactiveBuses = buses.filter((bus) => {
-    const status = bus.status?.toUpperCase();
+  const scheduledCount = schedules.filter(
+    (item) => statusOf(item) === "SCHEDULED"
+  ).length;
 
-    return (
-      status === "INACTIVE" ||
-      status === "OUT_OF_SERVICE"
-    );
-  }).length;
+  const runningCount = schedules.filter(
+    (item) => statusOf(item) === "RUNNING"
+  ).length;
 
-  const availableStaff = staff.filter((person) => {
-    const status = person.status?.toUpperCase();
+  const completedCount = schedules.filter(
+    (item) => statusOf(item) === "COMPLETED"
+  ).length;
 
-    return (
-      status === "ACTIVE" ||
-      status === "AVAILABLE" ||
-      status === "VERIFIED"
-    );
-  }).length;
+  const cancelledCount = schedules.filter(
+    (item) => statusOf(item) === "CANCELLED"
+  ).length;
 
-  const activeSchedules = schedules.filter((schedule) => {
-    return schedule.status === "SCHEDULED";
-  }).length;
-
-  const runningSchedules = schedules.filter((schedule) => {
-    return schedule.status === "RUNNING";
-  }).length;
-
-  const cancelledSchedules = schedules.filter((schedule) => {
-    return schedule.status === "CANCELLED";
-  }).length;
-
-  /* =======================================================
-     SCHEDULE STATUS
-  ======================================================= */
-
-  const getScheduleStatus = (schedule: Schedule) => {
-    const status = schedule.status?.toUpperCase();
-
-    if (status === "CANCELLED") {
-      return {
-        label: "Cancelled",
-        className: "bg-red-50 text-red-700",
-      };
-    }
-
-    if (status === "RUNNING") {
-      return {
-        label: "Running",
-        className: "bg-blue-50 text-blue-700",
-      };
-    }
-
-    if (status === "COMPLETED") {
-      return {
-        label: "Completed",
-        className: "bg-green-50 text-green-700",
-      };
-    }
-
-    return {
-      label: "Scheduled",
-      className: "bg-green-50 text-green-700",
-    };
-  };
-
-  /* =======================================================
-     ROUTE NAME
-  ======================================================= */
-
-  const getRouteName = (schedule: Schedule) => {
-    if (
-      schedule.route_name &&
-      schedule.route_name.trim()
-    ) {
-      return schedule.route_name;
-    }
-
-    if (schedule.name && schedule.name.trim()) {
-      return schedule.name;
-    }
+  function routeName(schedule: Schedule) {
+    if (schedule.route_name) return schedule.route_name;
 
     const route = routes.find(
       (item) => item.id === schedule.route_id
@@ -366,670 +246,459 @@ export default function DashboardPage() {
 
     if (route) {
       return (
-        route.name ||
         route.route_name ||
-        `${route.start_point || "-"} - ${
-          route.end_point || "-"
-        }`
+        route.name ||
+        `${route.start_point || "Start"} → ${route.end_point || "End"}`
       );
     }
 
-    if (
-      schedule.start_point ||
-      schedule.end_point
-    ) {
-      return `${schedule.start_point || "-"} - ${
-        schedule.end_point || "-"
-      }`;
-    }
+    return "Route not available";
+  }
 
-    return "Unknown Route";
-  };
+  function busName(schedule: Schedule) {
+    const bus = buses.find(
+      (item) => item.id === schedule.bus_id
+    );
 
-  /* =======================================================
-     STAFF NAME
-  ======================================================= */
+    return (
+      bus?.registration_no ||
+      schedule.registration_no ||
+      "Not assigned"
+    );
+  }
 
-  const getStaffName = (schedule: Schedule) => {
-    if (
-      schedule.staff_name &&
-      schedule.staff_name.trim()
-    ) {
-      return schedule.staff_name;
-    }
+  function driverName(schedule: Schedule) {
+    const driver = drivers.find(
+      (item) => item.id === schedule.driver_id
+    );
 
-    // Temporary compatibility with old backend
-    if (
-      schedule.driver_name &&
-      schedule.driver_name.trim()
-    ) {
-      return schedule.driver_name;
-    }
-
-    if (schedule.staff_id) {
-      const person = staff.find(
-        (item) => item.id === schedule.staff_id
-      );
-
-      if (person?.name) {
-        return person.name;
-      }
-    }
-
-    return "Not assigned";
-  };
-
-  /* =======================================================
-     BUS
-  ======================================================= */
-
-  const getBusNumber = (schedule: Schedule) => {
-    if (
-      schedule.registration_no &&
-      schedule.registration_no.trim()
-    ) {
-      return schedule.registration_no;
-    }
-
-    if (schedule.bus_id) {
-      const bus = buses.find(
-        (item) => item.id === schedule.bus_id
-      );
-
-      if (bus?.registration_no) {
-        return bus.registration_no;
-      }
-    }
-
-    return "Not assigned";
-  };
-
-  /* =======================================================
-     RENDER
-  ======================================================= */
+    return (
+      schedule.driver_name ||
+      driver?.name ||
+      "Not assigned"
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* ===================================================
-          SIDEBAR
-      =================================================== */}
-
       <AdminSidebar
         mobileOpen={mobileOpen}
         onClose={() => setMobileOpen(false)}
       />
 
-      {/* ===================================================
-          MAIN
-      =================================================== */}
-
       <div className="lg:pl-72">
-        {/* Header */}
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur md:px-6">
-          <div className="flex items-center">
-            <button
-              onClick={() => setMobileOpen(true)}
-              className="mr-4 rounded-lg p-2 text-slate-600 transition hover:bg-slate-100 lg:hidden"
-              aria-label="Open menu"
-            >
-              <FiMenu size={22} />
-            </button>
+       <header className="sticky top-0 z-30 flex h-16 items-center border-b border-slate-200 bg-white/95 px-4 backdrop-blur md:px-6">
+                 <button
+                   type="button"
+                   onClick={() => setMobileOpen(true)}
+                   className="mr-4 rounded-lg p-2 text-slate-600 transition hover:bg-slate-100 lg:hidden"
+                   aria-label="Open menu"
+                 >
+                   <FiMenu size={22} />
+                 </button>
+       
+                 <div>
+                   <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
+                     Administrator
+                   </p>
+       
+                   <p className="font-semibold text-slate-800">
+                     SRMSS Management Portal
+                   </p>
+                 </div>
+               </header>
 
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
-                Administrator
-              </p>
-
-              <p className="font-semibold text-slate-800">
-                SRMSS Management Portal
-              </p>
-            </div>
-          </div>
-
-          <button
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
-          >
-            <FiRefreshCw
-              size={16}
-              className={
-                refreshing ? "animate-spin" : ""
-              }
-            />
-
-            <span className="hidden sm:inline">
-              Refresh
-            </span>
-          </button>
-        </header>
 
         <main className="p-4 md:p-6 lg:p-8">
           <div className="mx-auto max-w-7xl">
-            {/* =================================================
-                PAGE HEADER
-            ================================================= */}
+            <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+              <div>
+                <p className="text-sm font-semibold text-red-600">
+                  SYSTEM OVERVIEW
+                </p>
+                <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-slate-950">
+                  Administrator Dashboard
+                </h1>
+                <p className="mt-2 max-w-2xl text-sm text-slate-500">
+                  Manage depots, users, fleet resources, routes,
+                  schedules and system reports from one place.
+                </p>
+              </div>
 
-            <div className="mb-8">
-              <p className="text-sm font-semibold text-red-600">
-                Operations Overview
-              </p>
-
-              <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">
-                Good morning, Administrator
-              </h1>
-
-              <p className="mt-2 text-slate-500">
-                Monitor and manage the SRMSS transport
-                operation from one place.
-              </p>
+              <div className="inline-flex w-fit items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700">
+                <FiActivity />
+                System overview
+              </div>
             </div>
 
-            {/* =================================================
-                ERROR
-            ================================================= */}
-
             {error && (
-              <div className="mb-6 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
-                <FiAlertCircle
-                  className="mt-0.5 shrink-0"
-                  size={19}
-                />
-
+              <div className="mb-6 flex gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-800">
+                <FiAlertCircle className="mt-0.5 shrink-0" />
                 <div>
                   <p className="font-semibold">
-                    Dashboard data unavailable
+                    Some dashboard data is unavailable
                   </p>
-
-                  <p className="mt-1 text-sm">
-                    {error}
-                  </p>
+                  <p className="mt-1 text-sm">{error}</p>
                 </div>
               </div>
             )}
 
-            {/* =================================================
-                MAIN STATS
-            ================================================= */}
-
+            {/* Main statistics */}
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              <DashboardStat
-                title="Total Users"
-                value={loading ? "..." : String(totalUsers)}
-                icon={FiUsers}
-                description="Registered system users"
-                href="/admin/users"
+              <StatCard
+                title="Total Depots"
+                value={loading ? "—" : String(depots.length)}
+                description={`${activeDepots} active depots`}
+                icon={FiBriefcase}
+                href="/admin/depots"
               />
 
-              <DashboardStat
+              <StatCard
                 title="Total Buses"
-                value={loading ? "..." : String(totalBuses)}
+                value={loading ? "—" : String(buses.length)}
+                description={`${availableBuses} available vehicles`}
                 icon={FiTruck}
-                description={`${activeBuses} active vehicles`}
                 href="/admin/buses"
               />
 
-              <DashboardStat
-                title="Routes"
-                value={loading ? "..." : String(totalRoutes)}
+              <StatCard
+                title="Registered Routes"
+                value={loading ? "—" : String(routes.length)}
+                description="Configured transport routes"
                 icon={FiMap}
-                description="Registered routes"
                 href="/admin/routes"
+              />
+
+              <StatCard
+                title="System Users"
+                value={loading ? "—" : String(users.length)}
+                description={`${activeUsers} active accounts`}
+                icon={FiUsers}
+                href="/admin/users"
+              />
+
+              <StatCard
+                title="Drivers"
+                value={loading ? "—" : String(drivers.length)}
+                description="Registered vehicle drivers"
+                icon={FiUserCheck}
+                href="/admin/drivers"
+              />
+
+              <StatCard
+                title="Today's Schedules"
+                value={loading ? "—" : String(todaySchedules.length)}
+                description={`${runningCount} trips currently running`}
+                icon={FiCalendar}
+                href="/admin/schedules"
               />
             </div>
 
-            {/* =================================================
-                TODAY'S SCHEDULES + QUICK MANAGEMENT
-            ================================================= */}
+            {/* Quick management */}
+            <section className="mt-8">
+              <SectionHeading
+                title="Quick Management"
+                subtitle="Access the main administrator functions."
+              />
 
-            <div className="mt-6 grid gap-6 lg:grid-cols-3">
-              {/* Today's Schedules */}
-
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-2">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-lg font-bold text-slate-900">
-                      Today&apos;s Schedules
-                    </h2>
-
-                    <p className="mt-1 text-sm text-slate-500">
-                      Planned transport operations for
-                      today
-                    </p>
-                  </div>
-
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 text-red-600">
-                    <FiCalendar size={21} />
-                  </div>
-                </div>
-
-                {loading ? (
-                  <div className="flex min-h-[260px] items-center justify-center">
-                    <div className="flex items-center gap-3 text-sm text-slate-500">
-                      <FiLoader
-                        className="animate-spin"
-                        size={20}
-                      />
-
-                      Loading schedules...
-                    </div>
-                  </div>
-                ) : todaysSchedules.length === 0 ? (
-                  <div className="mt-6 flex min-h-[220px] flex-col items-center justify-center rounded-xl bg-slate-50 text-center">
-                    <div className="rounded-full bg-white p-4 text-slate-400 shadow-sm">
-                      <FiCalendar size={25} />
-                    </div>
-
-                    <p className="mt-3 font-semibold text-slate-700">
-                      No schedules for today
-                    </p>
-
-                    <p className="mt-1 text-sm text-slate-400">
-                      There are no planned schedules for
-                      the current date.
-                    </p>
-
-                    <Link
-                      href="/admin/schedules"
-                      className="mt-4 text-sm font-semibold text-red-600 hover:text-red-700"
-                    >
-                      Create a schedule
-                    </Link>
-                  </div>
-                ) : (
-                  <div className="mt-6 overflow-x-auto">
-                    <table className="w-full min-w-[760px]">
-                      <thead>
-                        <tr className="border-b border-slate-100 text-left">
-                          <th className="pb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                            Route
-                          </th>
-
-                          <th className="pb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                            Bus
-                          </th>
-
-                          <th className="pb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                            Operational Staff
-                          </th>
-
-                          <th className="pb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                            Time
-                          </th>
-
-                          <th className="pb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                            Status
-                          </th>
-                        </tr>
-                      </thead>
-
-                      <tbody className="divide-y divide-slate-100">
-                        {todaysSchedules
-                          .slice(0, 6)
-                          .map((schedule) => {
-                            const status =
-                              getScheduleStatus(
-                                schedule
-                              );
-
-                            return (
-                              <tr
-                                key={schedule.id}
-                                className="transition hover:bg-slate-50"
-                              >
-                                <td className="py-4">
-                                  <div className="font-semibold text-slate-800">
-                                    {getRouteName(
-                                      schedule
-                                    )}
-                                  </div>
-
-                                  {schedule.route_code && (
-                                    <div className="mt-1 text-xs text-slate-400">
-                                      {
-                                        schedule.route_code
-                                      }
-                                    </div>
-                                  )}
-                                </td>
-
-                                <td className="py-4">
-                                  <div className="flex items-center gap-2 text-sm text-slate-500">
-                                    <FiTruck
-                                      size={14}
-                                    />
-
-                                    {getBusNumber(
-                                      schedule
-                                    )}
-                                  </div>
-                                </td>
-
-                                <td className="py-4">
-                                  <div className="flex items-center gap-2 text-sm text-slate-500">
-                                    <FiUserCheck
-                                      size={14}
-                                    />
-
-                                    {getStaffName(
-                                      schedule
-                                    )}
-                                  </div>
-                                </td>
-
-                                <td className="py-4">
-                                  <div className="flex items-center gap-2 text-sm text-slate-500">
-                                    <FiClock
-                                      size={14}
-                                    />
-
-                                    {formatTime(
-                                      schedule.departure_time
-                                    )}
-                                  </div>
-                                </td>
-
-                                <td className="py-4">
-                                  <span
-                                    className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${status.className}`}
-                                  >
-                                    {status.label}
-                                  </span>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-
-                <Link
+              <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <QuickAction
+                  href="/admin/depots"
+                  title="Manage Depots"
+                  description="Locations and depot supervisors"
+                  icon={<FiBriefcase />}
+                />
+                <QuickAction
+                  href="/admin/users"
+                  title="Manage Users"
+                  description="Accounts, roles and access"
+                  icon={<FiUsers />}
+                />
+                <QuickAction
+                  href="/admin/buses"
+                  title="Manage Fleet"
+                  description="Vehicle details and availability"
+                  icon={<FiTruck />}
+                />
+                <QuickAction
+                  href="/admin/drivers"
+                  title="Manage Drivers"
+                  description="Driver records and licences"
+                  icon={<FiUserCheck />}
+                />
+                <QuickAction
+                  href="/admin/routes"
+                  title="Manage Routes"
+                  description="Route details and endpoints"
+                  icon={<FiMap />}
+                />
+                <QuickAction
                   href="/admin/schedules"
-                  className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-red-600 transition hover:text-red-700"
-                >
-                  View all schedules
-                  <FiArrowRight size={16} />
-                </Link>
+                  title="Manage Schedules"
+                  description="Plan and manage services"
+                  icon={<FiCalendar />}
+                />
+                <QuickAction
+                  href="/admin/reports"
+                  title="View Reports"
+                  description="Operational reports and summaries"
+                  icon={<FiBarChart2 />}
+                />
               </div>
+            </section>
 
-              {/* Quick Management */}
-
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <h2 className="text-lg font-bold text-slate-900">
-                  Quick Management
-                </h2>
-
-                <p className="mt-1 text-sm text-slate-500">
-                  Frequently used administrator actions.
-                </p>
-
-                <div className="mt-6 space-y-3">
-                  <QuickAction
-                    href="/admin/users"
-                    icon={<FiUsers />}
-                    title="Manage Users"
-                  />
-
-                  <QuickAction
-                    href="/admin/buses"
-                    icon={<FiTruck />}
-                    title="Manage Buses"
-                  />
-
-                  <QuickAction
-                    href="/admin/routes"
-                    icon={<FiMap />}
-                    title="Manage Routes"
-                  />
-
-                  <QuickAction
-                    href="/admin/schedules"
-                    icon={<FiCalendar />}
-                    title="Manage Schedules"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* =================================================
-                SCHEDULE OVERVIEW
-            ================================================= */}
-
-            <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="flex flex-col justify-between gap-5 md:flex-row md:items-center">
-                <div>
-                  <h2 className="font-bold text-slate-900">
-                    Schedule Overview
-                  </h2>
-
-                  <p className="mt-1 text-sm text-slate-500">
-                    Current schedule status across the
-                    system.
-                  </p>
-                </div>
+            {/* Today's schedules */}
+            <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+              <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+                <SectionHeading
+                  title="Today's Schedules"
+                  subtitle="Review the planned services for today."
+                />
 
                 <Link
                   href="/admin/schedules"
                   className="inline-flex items-center gap-2 text-sm font-semibold text-red-600 hover:text-red-700"
                 >
-                  Manage schedules
-                  <FiArrowRight size={16} />
+                  All schedules <FiArrowRight />
                 </Link>
               </div>
 
-              <div className="mt-6 grid gap-4 sm:grid-cols-3">
-                <Metric
-                  label="Scheduled"
-                  value={
-                    loading
-                      ? "..."
-                      : String(activeSchedules)
-                  }
-                  icon={<FiCalendar />}
-                />
-
-                <Metric
-                  label="Running"
-                  value={
-                    loading
-                      ? "..."
-                      : String(runningSchedules)
-                  }
-                  icon={<FiClock />}
-                />
-
-                <Metric
-                  label="Cancelled"
-                  value={
-                    loading
-                      ? "..."
-                      : String(cancelledSchedules)
-                  }
-                  icon={<FiX />}
-                />
-              </div>
-            </div>
-
-            {/* =================================================
-                SYSTEM OVERVIEW
-            ================================================= */}
-
-            <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="flex flex-col justify-between gap-5 md:flex-row md:items-center">
-                <div>
-                  <h2 className="font-bold text-slate-900">
-                    System Overview
-                  </h2>
-
-                  <p className="mt-1 text-sm text-slate-500">
-                    Current resource availability.
+              {loading ? (
+                <div className="py-16 text-center text-sm text-slate-500">
+                  Loading schedule information...
+                </div>
+              ) : todaySchedules.length === 0 ? (
+                <div className="mt-5 rounded-xl bg-slate-50 px-4 py-12 text-center">
+                  <FiCalendar className="mx-auto text-3xl text-slate-400" />
+                  <p className="mt-3 font-semibold text-slate-700">
+                    No schedules for today
                   </p>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Create or review schedules to plan services.
+                  </p>
+                  <Link
+                    href="/admin/schedules"
+                    className="mt-4 inline-flex items-center gap-2 font-semibold text-red-600"
+                  >
+                    Manage schedules <FiArrowRight />
+                  </Link>
                 </div>
+              ) : (
+                <div className="mt-5 overflow-x-auto">
+                  <table className="w-full min-w-[680px] text-left">
+                    <thead>
+                      <tr className="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-400">
+                        <th className="px-3 py-3">Route</th>
+                        <th className="px-3 py-3">Bus</th>
+                        <th className="px-3 py-3">Driver</th>
+                        <th className="px-3 py-3">Departure</th>
+                        <th className="px-3 py-3">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {todaySchedules.slice(0, 8).map((item) => {
+                        const status = displayStatus(item.status);
 
-                <div className="flex items-center gap-2 text-sm font-semibold text-green-600">
-                  <span className="h-2.5 w-2.5 rounded-full bg-green-500" />
-
-                  System Operational
+                        return (
+                          <tr
+                            key={item.id}
+                            className="hover:bg-slate-50"
+                          >
+                            <td className="px-3 py-4">
+                              <p className="font-semibold text-slate-800">
+                                {routeName(item)}
+                              </p>
+                              {item.route_code && (
+                                <p className="mt-1 text-xs text-slate-400">
+                                  {item.route_code}
+                                </p>
+                              )}
+                            </td>
+                            <td className="px-3 py-4 text-sm text-slate-600">
+                              {busName(item)}
+                            </td>
+                            <td className="px-3 py-4 text-sm text-slate-600">
+                              {driverName(item)}
+                            </td>
+                            <td className="px-3 py-4 text-sm text-slate-600">
+                              {formatTime(item.departure_time)}
+                            </td>
+                            <td className="px-3 py-4">
+                              <span
+                                className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${status.className}`}
+                              >
+                                {status.label}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
+              )}
+            </section>
+
+            {/* Schedule status */}
+            <section className="mt-8">
+              <SectionHeading
+                title="Schedule Overview"
+                subtitle="Current status of all recorded schedules."
+              />
+
+              <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <MetricCard
+                  title="Scheduled"
+                  value={scheduledCount}
+                  icon={<FiCalendar />}
+                  color="blue"
+                  loading={loading}
+                />
+                <MetricCard
+                  title="Running"
+                  value={runningCount}
+                  icon={<FiClock />}
+                  color="amber"
+                  loading={loading}
+                />
+                <MetricCard
+                  title="Completed"
+                  value={completedCount}
+                  icon={<FiCheckCircle />}
+                  color="green"
+                  loading={loading}
+                />
+                <MetricCard
+                  title="Cancelled"
+                  value={cancelledCount}
+                  icon={<FiX />}
+                  color="red"
+                  loading={loading}
+                />
               </div>
+            </section>
 
-              <div className="mt-6 grid gap-4 sm:grid-cols-3">
-                <Metric
-                  label="Active Buses"
-                  value={
-                    loading
-                      ? "..."
-                      : String(activeBuses)
-                  }
-                  icon={<FiTruck />}
+            {/* Fleet status */}
+            <section className="mt-8 grid gap-6 lg:grid-cols-2">
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+                <SectionHeading
+                  title="Fleet Availability"
+                  subtitle="Distribution of registered buses by status."
                 />
 
-                <Metric
-                  label="Operational Staff"
-                  value={
-                    loading
-                      ? "..."
-                      : String(availableStaff)
-                  }
-                  icon={<FiUserCheck />}
-                />
-
-                <Metric
-                  label="Registered Routes"
-                  value={
-                    loading
-                      ? "..."
-                      : String(totalRoutes)
-                  }
-                  icon={<FiMap />}
-                />
-              </div>
-            </div>
-
-            {/* =================================================
-                FLEET + STAFF STATUS
-            ================================================= */}
-
-            <div className="mt-6 grid gap-6 md:grid-cols-2">
-              {/* Fleet Status */}
-
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-lg font-bold text-slate-900">
-                      Fleet Status
-                    </h2>
-
-                    <p className="mt-1 text-sm text-slate-500">
-                      Current vehicle availability
-                    </p>
-                  </div>
-
-                  <FiTruck
-                    className="text-red-600"
-                    size={22}
+                <div className="mt-6 space-y-5">
+                  <StatusBar
+                    label="Available"
+                    value={availableBuses}
+                    total={buses.length}
+                    color="bg-emerald-500"
                   />
-                </div>
-
-                <div className="mt-6 space-y-4">
-                  <StatusRow
-                    label="Active"
-                    value={activeBuses}
-                    total={totalBuses}
-                    type="success"
+                  <StatusBar
+                    label="Assigned"
+                    value={assignedBuses}
+                    total={buses.length}
+                    color="bg-blue-500"
                   />
-
-                  <StatusRow
+                  <StatusBar
                     label="Maintenance"
                     value={maintenanceBuses}
-                    total={totalBuses}
-                    type="warning"
+                    total={buses.length}
+                    color="bg-amber-500"
                   />
-
-                  <StatusRow
+                  <StatusBar
                     label="Inactive"
                     value={inactiveBuses}
-                    total={totalBuses}
-                    type="danger"
+                    total={buses.length}
+                    color="bg-red-500"
                   />
                 </div>
+
+                <Link
+                  href="/admin/buses"
+                  className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-red-600"
+                >
+                  Manage fleet <FiArrowRight />
+                </Link>
               </div>
 
-              {/* Operational Staff Status */}
-
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-lg font-bold text-slate-900">
-                      Operational Staff
-                    </h2>
-
-                    <p className="mt-1 text-sm text-slate-500">
-                      Current staff availability
-                    </p>
-                  </div>
-
-                  <FiUserCheck
-                    className="text-red-600"
-                    size={22}
-                  />
-                </div>
-
-                <div className="mt-6 space-y-4">
-                  <StatusRow
-                    label="Available"
-                    value={availableStaff}
-                    total={totalStaff}
-                    type="success"
-                  />
-
-                  <StatusRow
-                    label="On Duty"
-                    value={Math.max(
-                      totalStaff - availableStaff,
-                      0
-                    )}
-                    total={totalStaff}
-                    type="warning"
-                  />
-
-                  <StatusRow
-                    label="Inactive"
-                    value={Math.max(
-                      totalStaff -
-                        availableStaff -
-                        Math.max(
-                          totalStaff - availableStaff,
-                          0
-                        ),
-                      0
-                    )}
-                    total={totalStaff}
-                    type="danger"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* =================================================
-                FOOTER
-            ================================================= */}
-
-            <div className="mt-8 flex flex-col items-center justify-between gap-3 border-t border-slate-200 py-6 text-xs text-slate-400 sm:flex-row">
-              <p>
-                SRMSS Management Portal
-              </p>
-
-              <div className="flex items-center gap-2">
-                <FiCheckCircle
-                  className="text-green-500"
-                  size={14}
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+                <SectionHeading
+                  title="People & Depots"
+                  subtitle="A summary of users and depot management."
                 />
 
-                Connected to backend
+                <div className="mt-5 grid grid-cols-2 gap-3">
+                  <MiniStat
+                    label="Active users"
+                    value={loading ? "—" : activeUsers}
+                  />
+                  <MiniStat
+                    label="Supervisors"
+                    value={loading ? "—" : supervisors.length}
+                  />
+                  <MiniStat
+                    label="Operational staff"
+                    value={loading ? "—" : operationalStaff.length}
+                  />
+                  <MiniStat
+                    label="Active depots"
+                    value={loading ? "—" : activeDepots}
+                  />
+                </div>
+
+                <div className="mt-5 rounded-xl border border-slate-100 p-4">
+                  <div className="flex items-start gap-3">
+                    <FiBriefcase className="mt-1 text-red-600" size={20} />
+                    <div>
+                      <p className="font-semibold text-slate-800">
+                        Depot administration
+                      </p>
+                      <p className="mt-1 text-sm text-slate-500">
+                        Manage depot details and assign supervisors
+                        through the depot management page.
+                      </p>
+                      <Link
+                        href="/admin/depots"
+                        className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-red-600"
+                      >
+                        Manage depots <FiArrowRight />
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+
+                <Link
+                  href="/admin/users"
+                  className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-red-600"
+                >
+                  Manage user accounts <FiArrowRight />
+                </Link>
               </div>
-            </div>
+            </section>
+
+            {/* Reports */}
+            <section className="mt-8 flex flex-col justify-between gap-4 rounded-2xl bg-slate-900 p-6 text-white sm:flex-row sm:items-center">
+              <div className="flex items-start gap-4">
+                <div className="rounded-xl bg-white/10 p-3">
+                  <FiFileText size={24} />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold">
+                    System Reports
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-300">
+                    Review fleet, route and schedule summaries.
+                  </p>
+                </div>
+              </div>
+              <Link
+                href="/admin/reports"
+                className="inline-flex w-fit items-center gap-2 rounded-lg bg-red-600 px-4 py-3 text-sm font-semibold hover:bg-red-700"
+              >
+                Open reports <FiArrowRight />
+              </Link>
+            </section>
+
           </div>
         </main>
       </div>
@@ -1037,21 +706,17 @@ export default function DashboardPage() {
   );
 }
 
-/* =========================================================
-   DASHBOARD STAT
-========================================================= */
-
-function DashboardStat({
+function StatCard({
   title,
   value,
-  icon: Icon,
   description,
+  icon: Icon,
   href,
 }: {
   title: string;
   value: string;
-  icon: React.ElementType;
   description: string;
+  icon: ElementType;
   href: string;
 }) {
   return (
@@ -1059,159 +724,157 @@ function DashboardStat({
       href={href}
       className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-red-200 hover:shadow-md"
     >
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-sm font-medium text-slate-500">
             {title}
           </p>
-
-          <p className="mt-2 text-3xl font-bold text-slate-950">
+          <p className="mt-3 text-3xl font-extrabold text-slate-950">
             {value}
           </p>
-
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-2 text-xs text-slate-500">
             {description}
           </p>
         </div>
-
-        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-red-50 text-red-600 transition group-hover:bg-red-600 group-hover:text-white">
-          <Icon size={21} />
+        <div className="rounded-xl bg-red-50 p-3 text-red-600 transition group-hover:bg-red-600 group-hover:text-white">
+          <Icon size={22} />
         </div>
+      </div>
+      <div className="mt-4 flex items-center gap-1 text-xs font-semibold text-red-600">
+        View details <FiArrowRight />
       </div>
     </Link>
   );
 }
 
-/* =========================================================
-   QUICK ACTION
-========================================================= */
+function SectionHeading({
+  title,
+  subtitle,
+}: {
+  title: string;
+  subtitle: string;
+}) {
+  return (
+    <div>
+      <h2 className="text-lg font-bold text-slate-900">{title}</h2>
+      <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
+    </div>
+  );
+}
 
 function QuickAction({
   href,
-  icon,
   title,
+  description,
+  icon,
 }: {
   href: string;
-  icon: React.ReactNode;
   title: string;
+  description: string;
+  icon: ReactNode;
 }) {
   return (
     <Link
       href={href}
-      className="group flex items-center justify-between rounded-xl border border-slate-100 p-4 transition hover:border-red-100 hover:bg-red-50"
+      className="group flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-4 transition hover:border-red-200 hover:bg-red-50/50"
     >
-      <div className="flex items-center gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-600 transition group-hover:bg-red-100 group-hover:text-red-600">
-          {icon}
-        </div>
-
-        <span className="text-sm font-semibold text-slate-700">
-          {title}
-        </span>
+      <div className="rounded-lg bg-slate-100 p-3 text-slate-600 group-hover:bg-red-100 group-hover:text-red-600">
+        {icon}
       </div>
-
-      <FiArrowRight
-        className="text-slate-400 transition group-hover:translate-x-1 group-hover:text-red-600"
-        size={17}
-      />
+      <div className="min-w-0 flex-1">
+        <p className="font-semibold text-slate-800">{title}</p>
+        <p className="mt-1 text-xs leading-5 text-slate-500">
+          {description}
+        </p>
+      </div>
+      <FiArrowRight className="mt-1 shrink-0 text-slate-400 group-hover:text-red-600" />
     </Link>
   );
 }
 
-/* =========================================================
-   METRIC
-========================================================= */
-
-function Metric({
-  label,
+function MetricCard({
+  title,
   value,
   icon,
+  color,
+  loading,
+}: {
+  title: string;
+  value: number;
+  icon: ReactNode;
+  color: "blue" | "amber" | "green" | "red";
+  loading: boolean;
+}) {
+  const styles = {
+    blue: "bg-blue-50 text-blue-700",
+    amber: "bg-amber-50 text-amber-700",
+    green: "bg-emerald-50 text-emerald-700",
+    red: "bg-red-50 text-red-700",
+  };
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-medium text-slate-500">{title}</p>
+        <div className={`rounded-lg p-2 ${styles[color]}`}>{icon}</div>
+      </div>
+      <p className="mt-4 text-3xl font-extrabold text-slate-950">
+        {loading ? "—" : value}
+      </p>
+    </div>
+  );
+}
+
+function MiniStat({
+  label,
+  value,
 }: {
   label: string;
-  value: string;
-  icon: React.ReactNode;
+  value: string | number;
 }) {
   return (
     <div className="rounded-xl bg-slate-50 p-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-slate-500">
-          {label}
-        </p>
-
-        <span className="text-slate-400">
-          {icon}
-        </span>
-      </div>
-
-      <p className="mt-1 text-2xl font-bold text-slate-900">
+      <p className="text-xs font-medium text-slate-500">{label}</p>
+      <p className="mt-2 text-2xl font-bold text-slate-900">
         {value}
       </p>
     </div>
   );
 }
 
-/* =========================================================
-   STATUS ROW
-========================================================= */
-
-function StatusRow({
+function StatusBar({
   label,
   value,
   total,
-  type,
+  color,
 }: {
   label: string;
   value: number;
   total: number;
-  type: "success" | "warning" | "danger";
+  color: string;
 }) {
-  const colors = {
-    success: "bg-green-500",
-    warning: "bg-amber-500",
-    danger: "bg-red-500",
-  };
-
   const percentage =
-    total > 0
-      ? Math.min(
-          Math.round((value / total) * 100),
-          100
-        )
-      : 0;
+    total > 0 ? Math.min((value / total) * 100, 100) : 0;
 
   return (
     <div>
-      <div className="mb-2 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span
-            className={`h-2.5 w-2.5 rounded-full ${colors[type]}`}
-          />
-
-          <span className="text-sm font-medium text-slate-700">
-            {label}
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <span className="text-sm font-medium text-slate-700">
+          {label}
+        </span>
+        <span className="text-sm font-bold text-slate-800">
+          {value}
+          <span className="ml-1 text-xs font-normal text-slate-400">
+            ({Math.round(percentage)}%)
           </span>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-bold text-slate-800">
-            {value}
-          </span>
-
-          <span className="text-xs text-slate-400">
-            {percentage}%
-          </span>
-        </div>
+        </span>
       </div>
-
       <div className="h-2 overflow-hidden rounded-full bg-slate-100">
         <div
-          className={`h-full rounded-full ${colors[type]}`}
-          style={{
-            width: `${percentage}%`,
-          }}
+          className={`h-full rounded-full transition-all ${color}`}
+          style={{ width: `${percentage}%` }}
         />
       </div>
     </div>
   );
 }
-
