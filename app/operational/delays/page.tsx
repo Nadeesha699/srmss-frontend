@@ -377,17 +377,36 @@ export default function OperationalStaffReportDelaysPage() {
       />
 
       <main className="lg:ml-72">
-        <header className="sticky top-0 z-30 border-b border-slate-200 bg-white">
+ <header className="sticky top-0 z-30 flex h-16 items-center border-b border-slate-200 bg-white/95 px-4 backdrop-blur md:px-6">
+          <button
+            type="button"
+            onClick={() => setMobileOpen(true)}
+            className="mr-4 rounded-lg p-2 text-slate-600 hover:bg-slate-100 lg:hidden"
+            aria-label="Open menu"
+          >
+            <FiMenu size={22} />
+          </button>
+
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
+              Operational Staff
+            </p>
+            <p className="font-semibold text-slate-800">
+              SRMSS Management Portal
+            </p>
+          </div>
+           <button
+             onClick={() => void loadData()}
+              disabled={loading}
+            className="ml-auto inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+          >
+            <FiRefreshCw className={loading ? "animate-spin" : ""} />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
+        </header>
           <div className="flex items-center justify-between gap-3 px-4 py-4 sm:px-6 lg:px-8">
             <div className="flex min-w-0 items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setMobileOpen(true)}
-                aria-label="Open navigation"
-                className="rounded-lg border border-slate-200 p-2 hover:bg-slate-50 lg:hidden"
-              >
-                <FiMenu size={20} />
-              </button>
+       
 
               <div>
                 <h1 className="text-xl font-bold text-slate-900">
@@ -399,17 +418,7 @@ export default function OperationalStaffReportDelaysPage() {
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => void loadData()}
-              disabled={loading}
-              className="flex shrink-0 items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium hover:bg-slate-50 disabled:opacity-50"
-            >
-              <FiRefreshCw className={loading ? "animate-spin" : ""} />
-              <span className="hidden sm:inline">Refresh</span>
-            </button>
           </div>
-        </header>
 
         <div className="p-4 sm:p-6 lg:p-8">
           {error && (

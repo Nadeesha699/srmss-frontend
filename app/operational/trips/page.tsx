@@ -450,7 +450,7 @@ export default function AssignedTripsPage() {
               <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
                 Operational Staff
               </p>
-              <p className="font-semibold text-slate-800">Assigned Trips</p>
+              <p className="font-semibold text-slate-800">SRMSS Management Portal</p>
             </div>
           </div>
 

@@ -515,7 +515,7 @@ export default function TripUpdatesPage() {
               <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
                 Operational Staff
               </p>
-              <p className="font-semibold text-slate-800">Trip Updates</p>
+              <p className="font-semibold text-slate-800">SRMSS Management Portal</p>
             </div>
           </div>
 

@@ -165,7 +165,7 @@ function normalizeDate(value?: string) {
 
 function getTripDate(trip: Trip) {
   return normalizeDate(
-    trip.actual_start_time || trip.departure_time || trip.created_at
+    trip.actual_start_time || trip.departure_time || trip.created_at,
   );
 }
 
@@ -239,7 +239,6 @@ export default function OperationalDashboard() {
   const [maintenance, setMaintenance] = useState<Maintenance[]>([]);
 
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -261,9 +260,7 @@ export default function OperationalDashboard() {
     void loadDashboard(storedUser);
   }, []);
 
-  async function loadDashboard(
-    loggedUser: LoggedUser | null = user
-  ) {
+  async function loadDashboard(loggedUser: LoggedUser | null = user) {
     try {
       setError("");
 
@@ -280,7 +277,7 @@ export default function OperationalDashboard() {
       setLoading(true);
 
       const currentDepotId = Number(
-        loggedUser.depot_id ?? loggedUser.depot?.id
+        loggedUser.depot_id ?? loggedUser.depot?.id,
       );
 
       if (Number.isFinite(currentDepotId) && currentDepotId > 0) {
@@ -302,35 +299,30 @@ export default function OperationalDashboard() {
       ]);
 
       const allTrips = extractArray<Trip>(tripsResponse.data);
-      const allAssignments = extractArray<Assignment>(
-        assignmentsResponse.data
-      );
+      const allAssignments = extractArray<Assignment>(assignmentsResponse.data);
       const allDelays = extractArray<Delay>(delaysResponse.data);
       const allBuses = extractArray<Bus>(busesResponse.data);
       const allMaintenance = extractArray<Maintenance>(
-        maintenanceResponse.data
+        maintenanceResponse.data,
       );
 
       // Keep trips and assignments for the logged-in staff member.
       const staffTrips = allTrips.filter(
-        (trip) => Number(trip.staff_id) === Number(loggedUser.id)
+        (trip) => Number(trip.staff_id) === Number(loggedUser.id),
       );
 
       const staffAssignments = allAssignments.filter(
-        (assignment) =>
-          Number(assignment.staff_id) === Number(loggedUser.id)
+        (assignment) => Number(assignment.staff_id) === Number(loggedUser.id),
       );
 
       const staffDelays = allDelays.filter(
-        (delay) => Number(delay.reported_by) === Number(loggedUser.id)
+        (delay) => Number(delay.reported_by) === Number(loggedUser.id),
       );
 
       // Limit fleet information to the logged-in staff member's depot.
       const depotBuses =
         Number.isFinite(currentDepotId) && currentDepotId > 0
-          ? allBuses.filter(
-              (bus) => Number(bus.depot_id) === currentDepotId
-            )
+          ? allBuses.filter((bus) => Number(bus.depot_id) === currentDepotId)
           : [];
 
       setTrips(staffTrips);
@@ -339,25 +331,23 @@ export default function OperationalDashboard() {
       setBuses(depotBuses);
       setMaintenance(
         allMaintenance.filter((item) =>
-          depotBuses.some((bus) => Number(bus.id) === Number(item.bus_id))
-        )
+          depotBuses.some((bus) => Number(bus.id) === Number(item.bus_id)),
+        ),
       );
 
       // Resolve the depot banner name if localStorage only has depot_id.
       if (Number.isFinite(currentDepotId) && currentDepotId > 0) {
-        const storedName =
-          loggedUser.depot_name || loggedUser.depot?.name;
+        const storedName = loggedUser.depot_name || loggedUser.depot?.name;
 
         if (storedName) {
           setDepotName(storedName);
         } else {
           try {
             const depotResponse = await axios.get(
-              `${DEPOT_API}/${currentDepotId}`
+              `${DEPOT_API}/${currentDepotId}`,
             );
 
-            const payload =
-              depotResponse.data?.data ?? depotResponse.data;
+            const payload = depotResponse.data?.data ?? depotResponse.data;
 
             const depot: Depot = payload?.depot ?? payload;
 
@@ -376,24 +366,19 @@ export default function OperationalDashboard() {
       console.error("Operational dashboard error:", err);
       setError(
         err?.response?.data?.message ||
-          "Unable to load operational dashboard data."
+          "Unable to load operational dashboard data.",
       );
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   }
 
-  async function handleRefresh() {
-    setRefreshing(true);
-    await loadDashboard(user);
-  }
 
   const today = getTodayDate();
 
   const todayTrips = useMemo(
     () => trips.filter((trip) => getTripDate(trip) === today),
-    [trips, today]
+    [trips, today],
   );
 
   const assignedTrips = todayTrips.length;
@@ -401,15 +386,15 @@ export default function OperationalDashboard() {
   const activeTrips = todayTrips.filter(isActiveTrip).length;
 
   const completedTrips = todayTrips.filter(
-    (trip) => getTripStatus(trip) === "COMPLETED"
+    (trip) => getTripStatus(trip) === "COMPLETED",
   ).length;
 
   const pendingTrips = todayTrips.filter(
-    (trip) => getTripStatus(trip) === "SCHEDULED"
+    (trip) => getTripStatus(trip) === "SCHEDULED",
   ).length;
 
   const delayedTrips = todayTrips.filter(
-    (trip) => getTripStatus(trip) === "DELAYED"
+    (trip) => getTripStatus(trip) === "DELAYED",
   );
 
   const activeAssignments = assignments.filter((assignment) => {
@@ -419,16 +404,14 @@ export default function OperationalDashboard() {
   });
 
   const completionRate =
-    assignedTrips > 0
-      ? Math.round((completedTrips / assignedTrips) * 100)
-      : 0;
+    assignedTrips > 0 ? Math.round((completedTrips / assignedTrips) * 100) : 0;
 
   const finishedTrips = todayTrips.filter((trip) =>
-    ["COMPLETED", "DELAYED"].includes(getTripStatus(trip))
+    ["COMPLETED", "DELAYED"].includes(getTripStatus(trip)),
   );
 
   const onTimeTrips = todayTrips.filter(
-    (trip) => getTripStatus(trip) === "COMPLETED"
+    (trip) => getTripStatus(trip) === "COMPLETED",
   );
 
   const onTimeRate =
@@ -438,14 +421,14 @@ export default function OperationalDashboard() {
 
   const availableBuses = buses.filter((bus) =>
     ["AVAILABLE", "ACTIVE", "READY"].includes(
-      String(bus.status || "").toUpperCase()
-    )
+      String(bus.status || "").toUpperCase(),
+    ),
   );
 
   const maintenanceDueBuses = buses.filter((bus) => {
     const status = String(bus.status || "").toUpperCase();
     const maintenanceStatus = String(
-      bus.maintenance_status || ""
+      bus.maintenance_status || "",
     ).toUpperCase();
 
     return (
@@ -456,8 +439,8 @@ export default function OperationalDashboard() {
 
   const maintenanceAlerts = maintenance.filter((item) =>
     ["DUE", "OVERDUE", "PENDING"].includes(
-      String(item.status || item.maintenance_status || "").toUpperCase()
-    )
+      String(item.status || item.maintenance_status || "").toUpperCase(),
+    ),
   );
 
   const vehicleAvailability =
@@ -470,8 +453,8 @@ export default function OperationalDashboard() {
   const recentTrips = [...todayTrips]
     .sort((a, b) =>
       String(a.departure_time || "").localeCompare(
-        String(b.departure_time || "")
-      )
+        String(b.departure_time || ""),
+      ),
     )
     .slice(0, 5);
 
@@ -479,7 +462,7 @@ export default function OperationalDashboard() {
     .sort(
       (a, b) =>
         new Date(b.created_at || 0).getTime() -
-        new Date(a.created_at || 0).getTime()
+        new Date(a.created_at || 0).getTime(),
     )
     .slice(0, 3);
 
@@ -514,92 +497,43 @@ export default function OperationalDashboard() {
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:opacity-60"
-          >
-            <FiRefreshCw
-              className={refreshing ? "animate-spin" : ""}
-            />
-            <span className="hidden sm:inline">Refresh</span>
-          </button>
         </header>
 
         <div className="p-4 md:p-6 lg:p-8">
           <div className="mx-auto max-w-7xl">
-            <div className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-end">
-              <div>
-                <p className="text-sm font-semibold text-red-600">
-                  Operations Overview
-                </p>
-                <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">
-                  Good morning, {firstName}
-                </h1>
-                <p className="mt-2 text-slate-500">
+             <section className="mb-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="h-1.5 bg-red-600" />
+              <div className="flex flex-col justify-between gap-5 p-6 md:flex-row md:items-center md:p-8">
+                <div>
+                   <p className="text-sm font-semibold text-red-600">
+                 Depot Operations
+                  </p>
+                  <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-slate-950">
+                   Operational Staff Dashboard
+                  </h1>
+                  <p className="mt-2 max-w-2xl text-sm text-slate-500">
                   Monitor your assigned trips and operational activities.
-                </p>
-              </div>
+                  </p>
+                </div>
 
-              <div className="flex w-fit items-center gap-2 rounded-xl border border-green-100 bg-green-50 px-4 py-2.5 text-sm font-semibold text-green-700">
-                <span className="h-2.5 w-2.5 rounded-full bg-green-500" />
-                System Operational
-              </div>
-            </div>
-
-            {/* Depot Banner */}
-            <section className="mb-6 overflow-hidden rounded-2xl border border-red-100 bg-white shadow-sm">
-              <div className="flex flex-col gap-4 bg-gradient-to-r from-red-700 to-red-600 p-5 text-white sm:flex-row sm:items-center sm:justify-between sm:p-6">
-                <div className="flex items-start gap-4">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/15">
-                    <FiBriefcase size={24} />
+                <div className="flex w-full items-center gap-3 rounded-xl border border-red-100 bg-red-50 p-4 md:w-auto md:min-w-64">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white text-red-600 shadow-sm">
+                    <FiMapPin size={23} />
                   </div>
-
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-red-100">
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
                       Your Assigned Depot
                     </p>
-
-                    <h2 className="mt-1 text-xl font-bold sm:text-2xl">
-                      {depotName || (depotId ? "Depot name unavailable" : "No depot assigned")}
-                    </h2>
-
-                    {depotLocation && (
-                      <p className="mt-1 flex items-center gap-1.5 text-sm text-red-100">
-                        <FiMapPin size={14} />
-                        {depotLocation}
+                    <p className="mt-1 truncate text-lg font-bold text-slate-900">
+                      {depotName || "Loading depot..."}
+                    </p>
+                    {depotId !== null && (
+                      <p className="mt-0.5 text-xs text-slate-500">
+                        Depot ID: {depotId}
                       </p>
                     )}
                   </div>
                 </div>
-
-                <div className="rounded-xl border border-white/20 bg-white/10 px-4 py-3">
-                  <p className="text-xs font-medium text-red-100">
-                    Depot ID
-                  </p>
-                  <p className="mt-1 text-xl font-bold">
-                    {depotId ?? "Not assigned"}
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid gap-3 p-4 sm:grid-cols-3 sm:p-5">
-                <DepotInfo
-                  icon={<FiUser />}
-                  label="Staff Member"
-                  value={user?.name || "Not available"}
-                />
-                <DepotInfo
-                  icon={<FiTruck />}
-                  label="Depot Buses"
-                  value={`${buses.length}`}
-                />
-                <DepotInfo
-                  icon={<FiCalendar />}
-                  label="Today's Assigned Trips"
-                  value={`${assignedTrips}`}
-                />
               </div>
             </section>
 
@@ -933,9 +867,7 @@ function DepotInfo({
       </div>
       <div className="min-w-0">
         <p className="text-xs text-slate-500">{label}</p>
-        <p className="truncate text-sm font-semibold text-slate-800">
-          {value}
-        </p>
+        <p className="truncate text-sm font-semibold text-slate-800">{value}</p>
       </div>
     </div>
   );
@@ -1133,9 +1065,7 @@ function Alert({
         </div>
         <div>
           <p className="text-sm font-semibold text-slate-800">{title}</p>
-          <p className="mt-1 text-xs leading-5 text-slate-500">
-            {description}
-          </p>
+          <p className="mt-1 text-xs leading-5 text-slate-500">{description}</p>
         </div>
       </div>
     </div>

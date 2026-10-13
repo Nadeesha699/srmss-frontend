@@ -248,7 +248,7 @@ export default function SupervisorFuelRecordsPage() {
       />
 
       <main className="min-w-0 lg:ml-72">
-        <header className="sticky top-0 z-30 flex h-16 items-center border-b border-slate-200 bg-white/95 px-4 backdrop-blur md:px-6">
+      <header className="sticky top-0 z-30 flex h-16 items-center border-b border-slate-200 bg-white/95 px-4 backdrop-blur md:px-6">
           <button
             type="button"
             onClick={() => setMobileOpen(true)}
@@ -260,12 +260,21 @@ export default function SupervisorFuelRecordsPage() {
 
           <div>
             <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
-              Supervisor Portal
+              Supervisor
             </p>
             <p className="font-semibold text-slate-800">
               SRMSS Management Portal
             </p>
           </div>
+           <button
+            type="button"
+             onClick={() => void loadData(true)}
+              disabled={refreshing || depotId === null}
+            className="ml-auto inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-red-200 hover:text-red-600 disabled:opacity-50"
+          >
+            <FiRefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
         </header>
           <div className="flex items-center justify-between gap-3 px-4 py-4 sm:px-6 lg:px-8">
             <div className="flex items-center gap-3">
@@ -290,18 +299,6 @@ export default function SupervisorFuelRecordsPage() {
                 </p>
               </div>
             </div>
-
-            <button
-              type="button"
-              onClick={() => void loadData(true)}
-              disabled={refreshing || depotId === null}
-              className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold hover:bg-slate-50 disabled:opacity-50"
-            >
-              <FiRefreshCw
-                className={refreshing ? "animate-spin" : ""}
-              />
-              <span className="hidden sm:inline">Refresh</span>
-            </button>
           </div>
 
         <div className="p-4 sm:p-6 lg:p-8">

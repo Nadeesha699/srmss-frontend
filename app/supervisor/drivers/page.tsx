@@ -243,7 +243,7 @@ export default function SupervisorDriversPage() {
 
           <div>
             <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
-              Supervisor Portal
+              Supervisor
             </p>
             <p className="font-semibold text-slate-800">
               SRMSS Management Portal

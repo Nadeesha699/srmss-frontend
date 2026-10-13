@@ -120,24 +120,22 @@ export default function SupervisorSchedulePage() {
      FORMAT DATE
   ========================= */
 
- 
-const formatDate = (date: string) => {
-  if (!date) return "-";
+  const formatDate = (date: string) => {
+    if (!date) return "-";
 
-  const parsed = new Date(date);
+    const parsed = new Date(date);
 
-  if (Number.isNaN(parsed.getTime())) {
-    return date;
-  }
+    if (Number.isNaN(parsed.getTime())) {
+      return date;
+    }
 
-  return parsed.toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    timeZone: "UTC",
-  });
-};
-
+    return parsed.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      timeZone: "UTC",
+    });
+  };
 
   /* =========================
      FORMAT TIME
@@ -241,7 +239,7 @@ const formatDate = (date: string) => {
       />
 
       <div className="lg:ml-72">
-       <header className="sticky top-0 z-30 flex h-16 items-center border-b border-slate-200 bg-white/95 px-4 backdrop-blur md:px-6">
+        <header className="sticky top-0 z-30 flex h-16 items-center border-b border-slate-200 bg-white/95 px-4 backdrop-blur md:px-6">
           <button
             type="button"
             onClick={() => setMobileOpen(true)}
@@ -253,38 +251,35 @@ const formatDate = (date: string) => {
 
           <div>
             <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
-              Supervisor Portal
+              Supervisor
             </p>
             <p className="font-semibold text-slate-800">
               SRMSS Management Portal
             </p>
           </div>
+           <button
+            type="button"
+            onClick={() => void loadSchedules()}
+            disabled={loading}
+            className="ml-auto inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-red-200 hover:text-red-600 disabled:opacity-50"
+          >
+            <FiRefreshCw size={16} className={loading ? "animate-spin" : ""} />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
         </header>
-          <div className="flex h-16 items-center justify-between px-4 sm:px-6">
-            <div className="flex items-center gap-3">
+        <div className="flex h-16 items-center justify-between px-4 sm:px-6">
+          <div className="flex items-center gap-3">
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">
+                Schedule Management
+              </h1>
 
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">
-                  Schedule Management
-                </h1>
-
-                <p className="hidden text-xs text-gray-500 sm:block">
-                  View and monitor depot service schedules
-                </p>
-              </div>
+              <p className="hidden text-xs text-gray-500 sm:block">
+                View and monitor depot service schedules
+              </p>
             </div>
-
-            <button
-              type="button"
-              onClick={loadSchedules}
-              disabled={loading}
-              className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-            >
-              <FiRefreshCw className={loading ? "animate-spin" : ""} />
-
-              <span className="hidden sm:inline">Refresh</span>
-            </button>
           </div>
+        </div>
 
         <main className="p-4 sm:p-6">
           {/* ERROR */}
@@ -470,7 +465,6 @@ const formatDate = (date: string) => {
                               <div className="font-semibold text-gray-900">
                                 {schedule.route_code || "-"}
                               </div>
-
 
                               <div className="mt-1 text-xs text-gray-500">
                                 {schedule.start_point || "-"} →{" "}

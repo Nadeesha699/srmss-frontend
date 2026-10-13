@@ -1,4 +1,3 @@
-
 "use client";
 
 import { AdminSidebar } from "@/components/SideNavBar/AdminSideNavBar";
@@ -109,11 +108,8 @@ function displayStatus(status?: string) {
   };
 
   return {
-    label:
-      normalized.charAt(0) +
-      normalized.slice(1).toLowerCase(),
-    className:
-      styles[normalized] || "bg-slate-100 text-slate-600",
+    label: normalized.charAt(0) + normalized.slice(1).toLowerCase(),
+    className: styles[normalized] || "bg-slate-100 text-slate-600",
   };
 }
 
@@ -142,7 +138,7 @@ export default function DashboardPage() {
     ] as const;
 
     const results = await Promise.allSettled(
-      endpoints.map((item) => axios.get(item.url))
+      endpoints.map((item) => axios.get(item.url)),
     );
 
     let failures = 0;
@@ -152,16 +148,13 @@ export default function DashboardPage() {
         endpoints[index].set(getArray(result.value));
       } else {
         failures++;
-        console.error(
-          `Failed to load ${endpoints[index].url}`,
-          result.reason
-        );
+        console.error(`Failed to load ${endpoints[index].url}`, result.reason);
       }
     });
 
     if (failures > 0) {
       setError(
-        `${failures} data source(s) could not be loaded. Check the corresponding backend API endpoints.`
+        `${failures} data source(s) could not be loaded. Check the corresponding backend API endpoints.`,
       );
     }
 
@@ -174,75 +167,66 @@ export default function DashboardPage() {
 
   const todaySchedules = useMemo(() => {
     return schedules
-      .filter(
-        (item) =>
-          item.service_date?.slice(0, 10) === todayString()
-      )
+      .filter((item) => item.service_date?.slice(0, 10) === todayString())
       .sort((a, b) =>
-        (a.departure_time || "").localeCompare(
-          b.departure_time || ""
-        )
+        (a.departure_time || "").localeCompare(b.departure_time || ""),
       );
   }, [schedules]);
 
   const activeDepots = depots.filter(
-    (item) => statusOf(item) === "ACTIVE"
+    (item) => statusOf(item) === "ACTIVE",
   ).length;
 
   const activeUsers = users.filter(
-    (item) => statusOf(item) === "ACTIVE"
+    (item) => statusOf(item) === "ACTIVE",
   ).length;
 
   const supervisors = users.filter(
-    (item) => item.role?.toUpperCase() === "SUPERVISOR"
+    (item) => item.role?.toUpperCase() === "SUPERVISOR",
   );
 
   const operationalStaff = users.filter((item) =>
     ["OPERATIONAL_STAFF", "OPERATIONAL STAFF"].includes(
-      item.role?.toUpperCase() || ""
-    )
+      item.role?.toUpperCase() || "",
+    ),
   );
 
   const availableBuses = buses.filter((item) =>
-    ["AVAILABLE", "ACTIVE", "OPERATIONAL"].includes(
-      statusOf(item)
-    )
+    ["AVAILABLE", "ACTIVE", "OPERATIONAL"].includes(statusOf(item)),
   ).length;
 
   const assignedBuses = buses.filter(
-    (item) => statusOf(item) === "ASSIGNED"
+    (item) => statusOf(item) === "ASSIGNED",
   ).length;
 
   const maintenanceBuses = buses.filter(
-    (item) => statusOf(item) === "MAINTENANCE"
+    (item) => statusOf(item) === "MAINTENANCE",
   ).length;
 
   const inactiveBuses = buses.filter((item) =>
-    ["INACTIVE", "OUT_OF_SERVICE"].includes(statusOf(item))
+    ["INACTIVE", "OUT_OF_SERVICE"].includes(statusOf(item)),
   ).length;
 
   const scheduledCount = schedules.filter(
-    (item) => statusOf(item) === "SCHEDULED"
+    (item) => statusOf(item) === "SCHEDULED",
   ).length;
 
   const runningCount = schedules.filter(
-    (item) => statusOf(item) === "RUNNING"
+    (item) => statusOf(item) === "RUNNING",
   ).length;
 
   const completedCount = schedules.filter(
-    (item) => statusOf(item) === "COMPLETED"
+    (item) => statusOf(item) === "COMPLETED",
   ).length;
 
   const cancelledCount = schedules.filter(
-    (item) => statusOf(item) === "CANCELLED"
+    (item) => statusOf(item) === "CANCELLED",
   ).length;
 
   function routeName(schedule: Schedule) {
     if (schedule.route_name) return schedule.route_name;
 
-    const route = routes.find(
-      (item) => item.id === schedule.route_id
-    );
+    const route = routes.find((item) => item.id === schedule.route_id);
 
     if (route) {
       return (
@@ -256,27 +240,15 @@ export default function DashboardPage() {
   }
 
   function busName(schedule: Schedule) {
-    const bus = buses.find(
-      (item) => item.id === schedule.bus_id
-    );
+    const bus = buses.find((item) => item.id === schedule.bus_id);
 
-    return (
-      bus?.registration_no ||
-      schedule.registration_no ||
-      "Not assigned"
-    );
+    return bus?.registration_no || schedule.registration_no || "Not assigned";
   }
 
   function driverName(schedule: Schedule) {
-    const driver = drivers.find(
-      (item) => item.id === schedule.driver_id
-    );
+    const driver = drivers.find((item) => item.id === schedule.driver_id);
 
-    return (
-      schedule.driver_name ||
-      driver?.name ||
-      "Not assigned"
-    );
+    return schedule.driver_name || driver?.name || "Not assigned";
   }
 
   return (
@@ -287,27 +259,26 @@ export default function DashboardPage() {
       />
 
       <div className="lg:pl-72">
-       <header className="sticky top-0 z-30 flex h-16 items-center border-b border-slate-200 bg-white/95 px-4 backdrop-blur md:px-6">
-                 <button
-                   type="button"
-                   onClick={() => setMobileOpen(true)}
-                   className="mr-4 rounded-lg p-2 text-slate-600 transition hover:bg-slate-100 lg:hidden"
-                   aria-label="Open menu"
-                 >
-                   <FiMenu size={22} />
-                 </button>
-       
-                 <div>
-                   <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
-                     Administrator
-                   </p>
-       
-                   <p className="font-semibold text-slate-800">
-                     SRMSS Management Portal
-                   </p>
-                 </div>
-               </header>
+        <header className="sticky top-0 z-30 flex h-16 items-center border-b border-slate-200 bg-white/95 px-4 backdrop-blur md:px-6">
+          <button
+            type="button"
+            onClick={() => setMobileOpen(true)}
+            className="mr-4 rounded-lg p-2 text-slate-600 transition hover:bg-slate-100 lg:hidden"
+            aria-label="Open menu"
+          >
+            <FiMenu size={22} />
+          </button>
 
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
+              Administrator
+            </p>
+
+            <p className="font-semibold text-slate-800">
+              SRMSS Management Portal
+            </p>
+          </div>
+        </header>
 
         <main className="p-4 md:p-6 lg:p-8">
           <div className="mx-auto max-w-7xl">
@@ -320,8 +291,8 @@ export default function DashboardPage() {
                   Administrator Dashboard
                 </h1>
                 <p className="mt-2 max-w-2xl text-sm text-slate-500">
-                  Manage depots, users, fleet resources, routes,
-                  schedules and system reports from one place.
+                  Manage depots, users, fleet resources, routes, schedules and
+                  system reports from one place.
                 </p>
               </div>
 
@@ -500,10 +471,7 @@ export default function DashboardPage() {
                         const status = displayStatus(item.status);
 
                         return (
-                          <tr
-                            key={item.id}
-                            className="hover:bg-slate-50"
-                          >
+                          <tr key={item.id} className="hover:bg-slate-50">
                             <td className="px-3 py-4">
                               <p className="font-semibold text-slate-800">
                                 {routeName(item)}
@@ -654,8 +622,8 @@ export default function DashboardPage() {
                         Depot administration
                       </p>
                       <p className="mt-1 text-sm text-slate-500">
-                        Manage depot details and assign supervisors
-                        through the depot management page.
+                        Manage depot details and assign supervisors through the
+                        depot management page.
                       </p>
                       <Link
                         href="/admin/depots"
@@ -683,9 +651,7 @@ export default function DashboardPage() {
                   <FiFileText size={24} />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold">
-                    System Reports
-                  </h2>
+                  <h2 className="text-lg font-bold">System Reports</h2>
                   <p className="mt-1 text-sm text-slate-300">
                     Review fleet, route and schedule summaries.
                   </p>
@@ -698,7 +664,6 @@ export default function DashboardPage() {
                 Open reports <FiArrowRight />
               </Link>
             </section>
-
           </div>
         </main>
       </div>
@@ -726,15 +691,9 @@ function StatCard({
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-sm font-medium text-slate-500">
-            {title}
-          </p>
-          <p className="mt-3 text-3xl font-extrabold text-slate-950">
-            {value}
-          </p>
-          <p className="mt-2 text-xs text-slate-500">
-            {description}
-          </p>
+          <p className="text-sm font-medium text-slate-500">{title}</p>
+          <p className="mt-3 text-3xl font-extrabold text-slate-950">{value}</p>
+          <p className="mt-2 text-xs text-slate-500">{description}</p>
         </div>
         <div className="rounded-xl bg-red-50 p-3 text-red-600 transition group-hover:bg-red-600 group-hover:text-white">
           <Icon size={22} />
@@ -783,9 +742,7 @@ function QuickAction({
       </div>
       <div className="min-w-0 flex-1">
         <p className="font-semibold text-slate-800">{title}</p>
-        <p className="mt-1 text-xs leading-5 text-slate-500">
-          {description}
-        </p>
+        <p className="mt-1 text-xs leading-5 text-slate-500">{description}</p>
       </div>
       <FiArrowRight className="mt-1 shrink-0 text-slate-400 group-hover:text-red-600" />
     </Link>
@@ -825,19 +782,11 @@ function MetricCard({
   );
 }
 
-function MiniStat({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | number;
-}) {
+function MiniStat({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="rounded-xl bg-slate-50 p-4">
       <p className="text-xs font-medium text-slate-500">{label}</p>
-      <p className="mt-2 text-2xl font-bold text-slate-900">
-        {value}
-      </p>
+      <p className="mt-2 text-2xl font-bold text-slate-900">{value}</p>
     </div>
   );
 }
@@ -853,15 +802,12 @@ function StatusBar({
   total: number;
   color: string;
 }) {
-  const percentage =
-    total > 0 ? Math.min((value / total) * 100, 100) : 0;
+  const percentage = total > 0 ? Math.min((value / total) * 100, 100) : 0;
 
   return (
     <div>
       <div className="mb-2 flex items-center justify-between gap-3">
-        <span className="text-sm font-medium text-slate-700">
-          {label}
-        </span>
+        <span className="text-sm font-medium text-slate-700">{label}</span>
         <span className="text-sm font-bold text-slate-800">
           {value}
           <span className="ml-1 text-xs font-normal text-slate-400">

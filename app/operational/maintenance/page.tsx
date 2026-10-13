@@ -389,37 +389,43 @@ export default function OperationalStaffMaintenancePage() {
       />
 
       <main className="lg:ml-72">
-        <header className="sticky top-0 z-30 border-b border-slate-200 bg-white">
-          <div className="flex items-center justify-between gap-3 px-4 py-4 sm:px-6 lg:px-8">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setMobileOpen(true)}
-                className="rounded-lg border border-slate-200 p-2 lg:hidden"
-                aria-label="Open navigation"
-              >
-                <FiMenu />
-              </button>
+        <header className="sticky top-0 z-30 flex h-16 items-center border-b border-slate-200 bg-white/95 px-4 backdrop-blur md:px-6">
+          <button
+            type="button"
+            onClick={() => setMobileOpen(true)}
+            className="mr-4 rounded-lg p-2 text-slate-600 hover:bg-slate-100 lg:hidden"
+            aria-label="Open menu"
+          >
+            <FiMenu size={22} />
+          </button>
 
-              <div>
-                <h1 className="text-xl font-bold text-slate-900">
-                  Maintenance
-                </h1>
-                <p className="text-sm text-slate-500">
-                  Report vehicle problems and track maintenance records.
-                </p>
-              </div>
-            </div>
-
-            <button
-              onClick={() => void loadData()}
-              disabled={loading}
-              className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium hover:bg-slate-50 disabled:opacity-50"
-            >
-              <FiRefreshCw className={loading ? "animate-spin" : ""} />
-              <span className="hidden sm:inline">Refresh</span>
-            </button>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
+              Operational Staff
+            </p>
+            <p className="font-semibold text-slate-800">
+              SRMSS Management Portal
+            </p>
           </div>
+          <button
+            onClick={() => void loadData()}
+            disabled={loading}
+            className="ml-auto inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+          >
+            <FiRefreshCw className={loading ? "animate-spin" : ""} />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
         </header>
+        <div className="flex items-center justify-between gap-3 px-4 py-4 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-3">
+            <div>
+              <h1 className="text-xl font-bold text-slate-900">Maintenance</h1>
+              <p className="text-sm text-slate-500">
+                Report vehicle problems and track maintenance records.
+              </p>
+            </div>
+          </div>
+        </div>
 
         <div className="p-4 sm:p-6 lg:p-8">
           {error && (
@@ -605,7 +611,7 @@ export default function OperationalStaffMaintenancePage() {
             )}
           </section>
 
-          <section className="mt-6 rounded-2xl border border-blue-100 bg-blue-50 p-5">
+          {/* <section className="mt-6 rounded-2xl border border-blue-100 bg-blue-50 p-5">
             <div className="flex gap-3">
               <FiAlertCircle className="mt-0.5 shrink-0 text-blue-600" />
               <div>
@@ -621,7 +627,7 @@ export default function OperationalStaffMaintenancePage() {
                 </p>
               </div>
             </div>
-          </section>
+          </section> */}
         </div>
       </main>
 

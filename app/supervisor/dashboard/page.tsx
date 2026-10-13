@@ -593,14 +593,14 @@ export default function SupervisorDashboard() {
               <div className="h-1.5 bg-red-600" />
               <div className="flex flex-col justify-between gap-5 p-6 md:flex-row md:items-center md:p-8">
                 <div>
-                  <p className="text-sm font-semibold uppercase tracking-wider text-red-600">
-                    Depot Operations
+                   <p className="text-sm font-semibold text-red-600">
+                 Depot Operations
                   </p>
-                  <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">
-                    Supervisor Dashboard
+                  <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-slate-950">
+                   Supervisor Dashboard
                   </h1>
                   <p className="mt-2 max-w-2xl text-sm text-slate-500">
-                    Monitor schedules, trips, assignments, buses and operational
+                  Monitor schedules, trips, assignments, buses and operational
                     staff for your assigned depot.
                   </p>
                 </div>

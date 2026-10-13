@@ -255,7 +255,7 @@ export default function SupervisorTripsPage() {
 
       <main className="min-h-screen lg:pl-72">
         {/* Header */}
-         <header className="sticky top-0 z-30 flex h-16 items-center border-b border-slate-200 bg-white/95 px-4 backdrop-blur md:px-6">
+          <header className="sticky top-0 z-30 flex h-16 items-center border-b border-slate-200 bg-white/95 px-4 backdrop-blur md:px-6">
           <button
             type="button"
             onClick={() => setMobileOpen(true)}
@@ -267,12 +267,21 @@ export default function SupervisorTripsPage() {
 
           <div>
             <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
-              Supervisor Portal
+              Supervisor
             </p>
             <p className="font-semibold text-slate-800">
               SRMSS Management Portal
             </p>
           </div>
+           <button
+            type="button"
+            onClick={() => loadTrips(true)}
+              disabled={refreshing}
+            className="ml-auto inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-red-200 hover:text-red-600 disabled:opacity-50"
+          >
+            <FiRefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
         </header>
 
         <div className="p-4 sm:p-6 lg:p-8">
@@ -301,21 +310,8 @@ export default function SupervisorTripsPage() {
                 </p>
               </div>
             </div>
-
-            <button
-              onClick={() => loadTrips(true)}
-              disabled={refreshing}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <FiRefreshCw
-                size={17}
-                className={refreshing ? "animate-spin" : ""}
-              />
-              Refresh
-            </button>
           </div>
 
-          {/* Statistics */}
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {[
               {
