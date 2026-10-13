@@ -285,9 +285,6 @@ const filteredBuses = buses.filter((bus) => {
     setError("");
   };
 
-  /* ---------------------------------------------------------
-     CREATE / UPDATE
-  --------------------------------------------------------- */
 
   const handleSubmit = async (
     e: React.FormEvent<HTMLFormElement>,
@@ -330,13 +327,13 @@ const filteredBuses = buses.filter((bus) => {
       setError("");
 
       const payload = {
-        registration: form.registration_no
+        registration_no: form.registration_no
           .trim()
           .toUpperCase(),
 
         capacity,
 
-        serviceType: form.serviceType,
+        service_type: form.serviceType,
 
         mileage,
 
@@ -359,17 +356,12 @@ const filteredBuses = buses.filter((bus) => {
         const updatedBus =
           response.data?.data || {
             ...editingBus,
-            registration_no: payload.registration,
+            registration_no: payload.registration_no,
             capacity: payload.capacity,
-            serviceType: payload.serviceType,
+            service_type: payload.service_type,
             mileage: payload.mileage,
             status: payload.status,
             depot_id: payload.depot_id,
-            depot_name:
-              depots.find(
-                (depot) =>
-                  depot.id === payload.depot_id,
-              )?.name || "",
           };
 
         setBuses((current) =>
@@ -493,9 +485,9 @@ const filteredBuses = buses.filter((bus) => {
 
     try {
       const payload = {
-        registration: bus.registration_no,
+        registration_no: bus.registration_no,
         capacity: bus.capacity,
-        serviceType: bus.serviceType,
+        service_type: bus.serviceType,
         mileage: bus.mileage,
         status: newStatus,
         depot_id: bus.depot_id,
@@ -503,8 +495,7 @@ const filteredBuses = buses.filter((bus) => {
 
       const response = await axios.put(
         `${API_URL}/${bus.id}`,
-        payload,
-        getAuthConfig(),
+        payload
       );
 
       const updatedBus =

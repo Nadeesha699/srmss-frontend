@@ -51,7 +51,6 @@ type Delay = {
   recorded_by?: number;
   recorded_by_name?: string;
   recorded_at?: string;
-  trip_status?: string;
 };
 
 type DelayForm = {
@@ -116,9 +115,7 @@ function formatDate(value?: string) {
   if (!value) return "-";
 
   const date = new Date(
-    /^\d{4}-\d{2}-\d{2}$/.test(value)
-      ? `${value}T00:00:00`
-      : value
+    /^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T00:00:00` : value
   );
 
   if (Number.isNaN(date.getTime())) return value;
@@ -168,7 +165,6 @@ export default function OperationalStaffReportDelaysPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-
   const [modalOpen, setModalOpen] = useState(false);
 
   const [form, setForm] = useState<DelayForm>({
@@ -192,7 +188,7 @@ export default function OperationalStaffReportDelaysPage() {
       const id = Number(user.id);
 
       if (!Number.isFinite(id) || id <= 0) {
-        setError("The logged-in user ID is invalid. Please log in again.");
+        setError("Your logged-in user ID is invalid. Please log in again.");
         setLoading(false);
         return;
       }
@@ -232,20 +228,18 @@ export default function OperationalStaffReportDelaysPage() {
     }
   }, [userId, loadData]);
 
-  // This assumes GET /trips returns staff_id for each assigned trip.
+  // The backend must return staff_id for each trip.
   const myTrips = useMemo(() => {
     if (userId === null) return [];
 
-    return trips.filter(
-      (trip) => Number(trip.staff_id) === userId
-    );
+    return trips.filter((trip) => Number(trip.staff_id) === userId);
   }, [trips, userId]);
 
+  // Only active trips can receive delay reports.
   const reportableTrips = useMemo(
     () =>
-      myTrips.filter(
-        (trip) =>
-          !terminalStatuses.includes(normalizeStatus(trip.status))
+      myTrips.filter((trip) =>
+        ["IN_PROGRESS", "DELAYED"].includes(normalizeStatus(trip.status))
       ),
     [myTrips]
   );
@@ -271,14 +265,11 @@ export default function OperationalStaffReportDelaysPage() {
     );
   }, [myTrips, search]);
 
-  // The backend uses recorded_by and recorded_at.
   const myDelays = useMemo(() => {
     if (userId === null) return [];
 
     return delays
-      .filter(
-        (delay) => Number(delay.recorded_by) === userId
-      )
+      .filter((delay) => Number(delay.recorded_by) === userId)
       .sort(
         (a, b) =>
           new Date(b.recorded_at || 0).getTime() -
@@ -335,10 +326,19 @@ export default function OperationalStaffReportDelaysPage() {
       return;
     }
 
+    const currentStatus = normalizeStatus(selectedTrip.status);
+
+    if (!["IN_PROGRESS", "DELAYED"].includes(currentStatus)) {
+      setError(
+        "A delay can only be reported for a trip that is in progress or already delayed."
+      );
+      return;
+    }
+
     try {
       setSaving(true);
 
-      // Match the backend Delay model field names.
+      // First, save the delay report using backend field names.
       await axios.post(DELAY_API, {
         trip_id: selectedTrip.id,
         delay_minutes: minutes,
@@ -346,6 +346,13 @@ export default function OperationalStaffReportDelaysPage() {
         notes: form.description.trim() || null,
         recorded_by: userId,
       });
+
+      // Update the status only on the first delay report.
+      if (currentStatus !== "DELAYED") {
+        await axios.put(`${TRIP_API}/${selectedTrip.id}/`, {
+          status: "DELAYED",
+        });
+      }
 
       setModalOpen(false);
       setForm({
@@ -355,15 +362,16 @@ export default function OperationalStaffReportDelaysPage() {
         description: "",
       });
 
-      setSuccess("Delay report submitted successfully.");
-
-      // Refresh the list after saving the report.
+      setSuccess("Delay report submitted and trip status updated.");
       await loadData();
     } catch (err: any) {
       setError(
         err?.response?.data?.message ||
-          "Failed to submit delay report. Please try again."
+          "Failed to submit the delay report or update the trip status."
       );
+
+      // Reload in case the report was saved but the status update failed.
+      await loadData();
     } finally {
       setSaving(false);
     }
@@ -377,7 +385,7 @@ export default function OperationalStaffReportDelaysPage() {
       />
 
       <main className="lg:ml-72">
- <header className="sticky top-0 z-30 flex h-16 items-center border-b border-slate-200 bg-white/95 px-4 backdrop-blur md:px-6">
+        <header className="sticky top-0 z-30 flex h-16 items-center border-b border-slate-200 bg-white/95 px-4 backdrop-blur md:px-6">
           <button
             type="button"
             onClick={() => setMobileOpen(true)}
@@ -395,30 +403,28 @@ export default function OperationalStaffReportDelaysPage() {
               SRMSS Management Portal
             </p>
           </div>
-           <button
-             onClick={() => void loadData()}
-              disabled={loading}
+
+          <button
+            type="button"
+            onClick={() => void loadData()}
+            disabled={loading}
             className="ml-auto inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
           >
             <FiRefreshCw className={loading ? "animate-spin" : ""} />
             <span className="hidden sm:inline">Refresh</span>
           </button>
         </header>
-          <div className="flex items-center justify-between gap-3 px-4 py-4 sm:px-6 lg:px-8">
-            <div className="flex min-w-0 items-center gap-3">
-       
 
-              <div>
-                <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
-                  Report Delays
-                </h1>
-                <p className="mt-1 max-w-2xl text-sm text-slate-500">
-                  Report delays and operational problems on assigned trips.
-                </p>
-              </div>
-            </div>
-
+        <div className="flex items-center justify-between gap-3 px-4 py-4 sm:px-6 lg:px-8">
+          <div>
+            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+              Report Delays
+            </h1>
+            <p className="mt-1 max-w-2xl text-sm text-slate-500">
+              Report delays and operational problems on assigned trips.
+            </p>
           </div>
+        </div>
 
         <div className="p-4 sm:p-6 lg:p-8">
           {error && (
@@ -514,11 +520,9 @@ export default function OperationalStaffReportDelaysPage() {
 
           <section className="mb-8 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
             <div className="border-b border-slate-200 p-5">
-              <h2 className="font-bold text-slate-900">
-                My Assigned Trips
-              </h2>
+              <h2 className="font-bold text-slate-900">My Assigned Trips</h2>
               <p className="mt-1 text-sm text-slate-500">
-                Select an assigned trip to submit an operational delay report.
+                Report a delay for a trip that is in progress or already delayed.
               </p>
             </div>
 
@@ -540,9 +544,11 @@ export default function OperationalStaffReportDelaysPage() {
             ) : (
               <div className="divide-y divide-slate-100">
                 {filteredTrips.map((trip) => {
-                  const isTerminal = terminalStatuses.includes(
-                    normalizeStatus(trip.status)
+                  const status = normalizeStatus(trip.status);
+                  const canReportDelay = ["IN_PROGRESS", "DELAYED"].includes(
+                    status
                   );
+                  const isTerminal = terminalStatuses.includes(status);
 
                   return (
                     <div
@@ -564,7 +570,7 @@ export default function OperationalStaffReportDelaysPage() {
                                 trip.status
                               )}`}
                             >
-                              {normalizeStatus(trip.status)}
+                              {status.replaceAll("_", " ")}
                             </span>
                           </div>
 
@@ -596,7 +602,7 @@ export default function OperationalStaffReportDelaysPage() {
                         </div>
                       </div>
 
-                      {!isTerminal && (
+                      {!isTerminal && canReportDelay && (
                         <button
                           type="button"
                           onClick={() => openModal(trip)}
@@ -615,9 +621,7 @@ export default function OperationalStaffReportDelaysPage() {
 
           <section className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
             <div className="border-b border-slate-200 p-5">
-              <h2 className="font-bold text-slate-900">
-                Recent Delay Reports
-              </h2>
+              <h2 className="font-bold text-slate-900">Recent Delay Reports</h2>
               <p className="mt-1 text-sm text-slate-500">
                 Delay reports submitted by your account.
               </p>
@@ -655,9 +659,7 @@ export default function OperationalStaffReportDelaysPage() {
                         </span>
                         <span className="text-xs text-slate-400">
                           {delay.recorded_at
-                            ? new Date(delay.recorded_at).toLocaleString(
-                                "en-LK"
-                              )
+                            ? new Date(delay.recorded_at).toLocaleString("en-LK")
                             : "-"}
                         </span>
                       </div>
@@ -823,8 +825,8 @@ export default function OperationalStaffReportDelaysPage() {
               </div>
 
               <p className="text-xs text-slate-500">
-                Submit factual information about the delay. The report will be
-                recorded under your logged-in account.
+                The report will be recorded under your logged-in account.
+                Reporting a delay updates the trip status to DELAYED.
               </p>
             </div>
 
@@ -854,4 +856,3 @@ export default function OperationalStaffReportDelaysPage() {
     </div>
   );
 }
-

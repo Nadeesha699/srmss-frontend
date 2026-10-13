@@ -70,7 +70,7 @@ type Trip = {
 };
 
 type LoggedUser = {
-  id: number;
+  id?: number;
   staff_id?: number;
   name?: string;
   email?: string;
@@ -78,11 +78,13 @@ type LoggedUser = {
 };
 
 function extractArray<T>(response: any): T[] {
-  if (Array.isArray(response)) return response;
-  if (Array.isArray(response?.data)) return response.data;
-  if (Array.isArray(response?.data?.data)) return response.data.data;
-  if (Array.isArray(response?.results)) return response.results;
-  if (Array.isArray(response?.data?.results)) return response.data.results;
+  const body = response?.data ?? response;
+
+  if (Array.isArray(body)) return body;
+  if (Array.isArray(body?.data)) return body.data;
+  if (Array.isArray(body?.results)) return body.results;
+  if (Array.isArray(body?.data?.results)) return body.data.results;
+
   return [];
 }
 
@@ -121,7 +123,7 @@ function getTripStaffId(trip: Trip): number | null {
   return Number.isFinite(id) ? id : null;
 }
 
-function normalizeDate(value?: string): string {
+function normalizeDate(value?: string | null): string {
   return value ? value.substring(0, 10) : "";
 }
 
@@ -136,12 +138,25 @@ function getTodayDate(): string {
 }
 
 function getTripDate(trip: Trip): string {
-  return normalizeDate(
-    trip.schedule_date ||
-      trip.departure_time ||
-      trip.actual_start_time ||
-      trip.created_at,
-  );
+  // Prefer the scheduled service date.
+  if (trip.schedule_date) return normalizeDate(trip.schedule_date);
+
+  // Only use departure_time as a date if it contains a date.
+  if (
+    trip.departure_time &&
+    /^\d{4}-\d{2}-\d{2}/.test(trip.departure_time)
+  ) {
+    return normalizeDate(trip.departure_time);
+  }
+
+  if (
+    trip.actual_start_time &&
+    /^\d{4}-\d{2}-\d{2}/.test(trip.actual_start_time)
+  ) {
+    return normalizeDate(trip.actual_start_time);
+  }
+
+  return normalizeDate(trip.created_at);
 }
 
 function getRouteName(trip: Trip): string {
@@ -156,17 +171,25 @@ function getRouteName(trip: Trip): string {
 }
 
 function getBusName(trip: Trip): string {
-  return trip.registration_no || trip.bus || "Bus not assigned";
+  return (
+    trip.registration_no ||
+    trip.bus ||
+    (trip.bus_id ? `Bus #${trip.bus_id}` : "Bus not assigned")
+  );
 }
 
 function getTripNumber(trip: Trip): string {
-  return  `TRIP-${trip.id}`;
+  return `TRIP-${trip.id}`;
 }
 
 function getStatus(status?: string): TripStatus {
   const value = String(status || "").toUpperCase();
 
-  if (value === "IN_PROGRESS" || value === "RUNNING" || value === "STARTED") {
+  if (
+    value === "IN_PROGRESS" ||
+    value === "RUNNING" ||
+    value === "STARTED"
+  ) {
     return "IN_PROGRESS";
   }
 
@@ -248,29 +271,27 @@ export default function AssignedTripsPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [updatingTripId, setUpdatingTripId] = useState<number | null>(null);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const loadTrips = useCallback(async (staffId: number) => {
     try {
       setError("");
 
       const response = await axios.get(TRIP_API);
-      const allTrips = extractArray<Trip>(response.data);
+      const allTrips = extractArray<Trip>(response);
 
-      console.log("Trips API response:", response.data);
-      console.log("Logged-in staff ID:", staffId);
-
+      // This assumes GET /api/trips returns the assignment's staff_id.
       const staffTrips = allTrips.filter(
-        (trip) => getTripStaffId(trip) === Number(staffId),
+        (trip) => getTripStaffId(trip) === Number(staffId)
       );
 
-      console.log("Trips assigned to current staff:", staffTrips.length);
       setTrips(staffTrips);
     } catch (err: any) {
       console.error("Failed to load trips:", err);
 
       setError(
         err?.response?.data?.message ||
-          "Failed to load trips. Check that the backend is running and /api/trips is available.",
+          "Failed to load trips. Check the backend API."
       );
 
       setTrips([]);
@@ -286,11 +307,13 @@ export default function AssignedTripsPage() {
       return;
     }
 
-    const role = String(loggedUser.role || "").toUpperCase();
+    const role = String(loggedUser.role || "")
+      .toUpperCase()
+      .replace(/[\s-]+/g, "_");
 
     if (
       role &&
-      !["OPERATIONAL_STAFF", "OPERATIONAL STAFF", "STAFF"].includes(role)
+      !["OPERATIONAL_STAFF", "STAFF"].includes(role)
     ) {
       setError("This page is intended for an Operational Staff account.");
       setLoading(false);
@@ -300,7 +323,7 @@ export default function AssignedTripsPage() {
     const staffId = getStaffId(loggedUser);
 
     if (!Number.isFinite(staffId) || staffId <= 0) {
-      setError("The logged-in staff ID is invalid. Please check your user record.");
+      setError("The logged-in staff ID is invalid. Please log in again.");
       setLoading(false);
       return;
     }
@@ -314,7 +337,7 @@ export default function AssignedTripsPage() {
     })();
   }, [loadTrips]);
 
-  async function handleRefresh() {
+  const handleRefresh = async () => {
     if (!user) return;
 
     setRefreshing(true);
@@ -324,17 +347,31 @@ export default function AssignedTripsPage() {
     } finally {
       setRefreshing(false);
     }
-  }
+  };
 
-  async function updateTripStatus(
+  const updateTripStatus = async (
     trip: Trip,
-    nextStatus: "IN_PROGRESS" | "COMPLETED",
-  ) {
-    if (!user) return;
+    nextStatus: "IN_PROGRESS" | "COMPLETED"
+  ) => {
+    if (!user || updatingTripId !== null) return;
+
+    const currentStatus = getStatus(trip.status);
+
+    const validTransition =
+      (currentStatus === "SCHEDULED" && nextStatus === "IN_PROGRESS") ||
+      (currentStatus === "DELAYED" && nextStatus === "IN_PROGRESS") ||
+      (currentStatus === "IN_PROGRESS" && nextStatus === "COMPLETED") ||
+      (currentStatus === "DELAYED" && nextStatus === "COMPLETED");
+
+    if (!validTransition) {
+      setError(`Cannot change trip status from ${currentStatus} to ${nextStatus}.`);
+      return;
+    }
 
     try {
       setUpdatingTripId(trip.id);
       setError("");
+      setSuccess("");
 
       const now = new Date().toISOString();
 
@@ -342,59 +379,65 @@ export default function AssignedTripsPage() {
         status: nextStatus,
         actual_start_time:
           nextStatus === "IN_PROGRESS"
-            ? now
+            ? trip.actual_start_time || now
             : trip.actual_start_time || null,
         actual_end_time:
           nextStatus === "COMPLETED"
             ? now
-            : trip.actual_end_time || null,
+            : null,
       };
 
       const response = await axios.patch(
         `${TRIP_API}/${trip.id}/status`,
-        payload,
+        payload
       );
 
       if (response.data?.success === false) {
-        throw new Error(
-          response.data.message || "Failed to update trip status",
-        );
+        throw new Error(response.data.message || "Failed to update trip status.");
       }
 
-      setTrips((current) =>
-        current.map((item) =>
-          item.id === trip.id ? { ...item, ...payload } : item,
-        ),
-      );
-
-      setSelectedTrip((current) =>
-        current?.id === trip.id ? { ...current, ...payload } : current,
+      setSuccess(
+        nextStatus === "IN_PROGRESS"
+          ? currentStatus === "DELAYED"
+            ? "Trip resumed successfully."
+            : "Trip started successfully."
+          : "Trip completed successfully."
       );
 
       await loadTrips(getStaffId(user));
+
+      setSelectedTrip((current) =>
+        current?.id === trip.id
+          ? {
+              ...current,
+              ...payload,
+              status: nextStatus,
+            }
+          : current
+      );
     } catch (err: any) {
       console.error("Trip status update failed:", err);
 
       setError(
         err?.response?.data?.message ||
           err?.message ||
-          "Unable to update trip status.",
+          "Unable to update trip status."
       );
     } finally {
       setUpdatingTripId(null);
     }
-  }
+  };
 
   const filteredTrips = useMemo(() => {
     const search = searchValue.trim().toLowerCase();
 
     return trips
       .filter(
-        (trip) => dateFilter === "ALL" || getTripDate(trip) === getTodayDate(),
+        (trip) => dateFilter === "ALL" || getTripDate(trip) === getTodayDate()
       )
       .filter(
         (trip) =>
-          statusFilter === "ALL" || getStatus(trip.status) === statusFilter,
+          statusFilter === "ALL" || getStatus(trip.status) === statusFilter
       )
       .filter((trip) => {
         if (!search) return true;
@@ -414,14 +457,14 @@ export default function AssignedTripsPage() {
       })
       .sort((a, b) =>
         String(a.departure_time || "").localeCompare(
-          String(b.departure_time || ""),
-        ),
+          String(b.departure_time || "")
+        )
       );
   }, [trips, searchValue, statusFilter, dateFilter]);
 
   const todayTrips = useMemo(
     () => trips.filter((trip) => getTripDate(trip) === getTodayDate()),
-    [trips],
+    [trips]
   );
 
   const countStatus = (status: TripStatus) =>
@@ -450,7 +493,9 @@ export default function AssignedTripsPage() {
               <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
                 Operational Staff
               </p>
-              <p className="font-semibold text-slate-800">SRMSS Management Portal</p>
+              <p className="font-semibold text-slate-800">
+                SRMSS Management Portal
+              </p>
             </div>
           </div>
 
@@ -469,20 +514,47 @@ export default function AssignedTripsPage() {
           <div className="mx-auto max-w-7xl">
             <div className="mb-8">
               <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
-                  Assigned Trips
+                Assigned Trips
               </h1>
               <p className="mt-1 max-w-2xl text-sm text-slate-500">
-                  View and manage the trips assigned to you.
+                View and manage the trips assigned to you.
               </p>
             </div>
 
             {error && (
-              <div className="mb-6 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
+              <div
+                role="alert"
+                className="mb-6 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700"
+              >
                 <FiAlertTriangle className="mt-0.5 shrink-0" />
-                <div>
+                <div className="flex-1">
                   <p className="font-semibold">Notice</p>
                   <p className="mt-1 text-sm">{error}</p>
                 </div>
+                <button
+                  type="button"
+                  aria-label="Dismiss error"
+                  onClick={() => setError("")}
+                >
+                  <FiX />
+                </button>
+              </div>
+            )}
+
+            {success && (
+              <div
+                role="status"
+                className="mb-6 flex items-start gap-3 rounded-xl border border-green-200 bg-green-50 p-4 text-green-700"
+              >
+                <FiCheckCircle className="mt-0.5 shrink-0" />
+                <p className="flex-1 text-sm">{success}</p>
+                <button
+                  type="button"
+                  aria-label="Dismiss success message"
+                  onClick={() => setSuccess("")}
+                >
+                  <FiX />
+                </button>
               </div>
             )}
 
@@ -517,7 +589,7 @@ export default function AssignedTripsPage() {
                   />
                 </div>
 
-                <div className="mt-6 text-gray-600 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                     <div className="relative w-full lg:max-w-md">
                       <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -575,7 +647,8 @@ export default function AssignedTripsPage() {
                       My Assigned Trips
                     </h2>
                     <p className="mt-1 text-sm text-slate-500">
-                      {filteredTrips.length} trip{filteredTrips.length !== 1 ? "s" : ""} found
+                      {filteredTrips.length} trip
+                      {filteredTrips.length !== 1 ? "s" : ""} found
                     </p>
                   </div>
 
@@ -650,7 +723,9 @@ export default function AssignedTripsPage() {
                                       {formatTime(trip.departure_time)}
                                     </p>
                                     <p className="mt-1 text-xs text-slate-400">
-                                      {formatDate(trip.schedule_date || trip.departure_time)}
+                                      {formatDate(
+                                        trip.schedule_date || trip.departure_time
+                                      )}
                                     </p>
                                   </td>
 
@@ -665,32 +740,49 @@ export default function AssignedTripsPage() {
                                   <td className="px-5 py-4">
                                     <div className="flex flex-wrap justify-end gap-2">
                                       {status === "SCHEDULED" && (
-                                        <button
-                                          type="button"
+                                        <ActionButton
                                           disabled={updating}
                                           onClick={() =>
-                                            updateTripStatus(trip, "IN_PROGRESS")
+                                            void updateTripStatus(
+                                              trip,
+                                              "IN_PROGRESS"
+                                            )
                                           }
-                                          className="flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50"
-                                        >
-                                          <FiPlay />
-                                          {updating ? "Starting..." : "Start"}
-                                        </button>
+                                          icon={<FiPlay />}
+                                          label={updating ? "Starting..." : "Start"}
+                                          className="bg-green-600 hover:bg-green-700"
+                                        />
+                                      )}
+
+                                      {status === "DELAYED" && (
+                                        <ActionButton
+                                          disabled={updating}
+                                          onClick={() =>
+                                            void updateTripStatus(
+                                              trip,
+                                              "IN_PROGRESS"
+                                            )
+                                          }
+                                          icon={<FiPlay />}
+                                          label={updating ? "Resuming..." : "Resume"}
+                                          className="bg-blue-600 hover:bg-blue-700"
+                                        />
                                       )}
 
                                       {(status === "IN_PROGRESS" ||
                                         status === "DELAYED") && (
-                                        <button
-                                          type="button"
+                                        <ActionButton
                                           disabled={updating}
                                           onClick={() =>
-                                            updateTripStatus(trip, "COMPLETED")
+                                            void updateTripStatus(
+                                              trip,
+                                              "COMPLETED"
+                                            )
                                           }
-                                          className="flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50"
-                                        >
-                                          <FiCheckCircle />
-                                          {updating ? "Updating..." : "Complete"}
-                                        </button>
+                                          icon={<FiCheckCircle />}
+                                          label={updating ? "Updating..." : "Complete"}
+                                          className="bg-red-600 hover:bg-red-700"
+                                        />
                                       )}
 
                                       <button
@@ -736,7 +828,9 @@ export default function AssignedTripsPage() {
                                 />
                                 <MobileInfo
                                   label="Date"
-                                  value={formatDate(trip.schedule_date || trip.departure_time)}
+                                  value={formatDate(
+                                    trip.schedule_date || trip.departure_time
+                                  )}
                                   icon={<FiCalendar />}
                                 />
                                 <MobileInfo
@@ -753,38 +847,46 @@ export default function AssignedTripsPage() {
 
                               <div className="mt-4 flex flex-wrap gap-2">
                                 {status === "SCHEDULED" && (
-                                  <button
-                                    type="button"
+                                  <ActionButton
                                     disabled={updating}
                                     onClick={() =>
-                                      updateTripStatus(trip, "IN_PROGRESS")
+                                      void updateTripStatus(trip, "IN_PROGRESS")
                                     }
-                                    className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-green-600 px-3 py-2.5 text-xs font-bold text-white disabled:opacity-50"
-                                  >
-                                    <FiPlay />
-                                    {updating ? "Starting..." : "Start Trip"}
-                                  </button>
+                                    icon={<FiPlay />}
+                                    label={updating ? "Starting..." : "Start Trip"}
+                                    className="flex-1 bg-green-600 hover:bg-green-700"
+                                  />
+                                )}
+
+                                {status === "DELAYED" && (
+                                  <ActionButton
+                                    disabled={updating}
+                                    onClick={() =>
+                                      void updateTripStatus(trip, "IN_PROGRESS")
+                                    }
+                                    icon={<FiPlay />}
+                                    label={updating ? "Resuming..." : "Resume Trip"}
+                                    className="flex-1 bg-blue-600 hover:bg-blue-700"
+                                  />
                                 )}
 
                                 {(status === "IN_PROGRESS" ||
                                   status === "DELAYED") && (
-                                  <button
-                                    type="button"
+                                  <ActionButton
                                     disabled={updating}
                                     onClick={() =>
-                                      updateTripStatus(trip, "COMPLETED")
+                                      void updateTripStatus(trip, "COMPLETED")
                                     }
-                                    className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-red-600 px-3 py-2.5 text-xs font-bold text-white disabled:opacity-50"
-                                  >
-                                    <FiCheckCircle />
-                                    {updating ? "Updating..." : "Complete Trip"}
-                                  </button>
+                                    icon={<FiCheckCircle />}
+                                    label={updating ? "Updating..." : "Complete Trip"}
+                                    className="flex-1 bg-red-600 hover:bg-red-700"
+                                  />
                                 )}
 
                                 <button
                                   type="button"
                                   onClick={() => setSelectedTrip(trip)}
-                                  className="flex items-center justify-center rounded-lg border border-slate-200 px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-red-50 hover:text-red-600"
+                                  className="rounded-lg border border-slate-200 px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-red-50 hover:text-red-600"
                                 >
                                   View
                                 </button>
@@ -796,30 +898,6 @@ export default function AssignedTripsPage() {
                     </>
                   )}
                 </div>
-
-                {/* <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                  <div className="flex items-start gap-4">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600">
-                      <FiActivity size={20} />
-                    </div>
-                    <div>
-                      <h2 className="font-bold text-slate-900">Trip Workflow</h2>
-                      <p className="mt-1 text-sm leading-6 text-slate-500">
-                        Start your trip when you depart, report delays when necessary,
-                        and mark the trip as completed when the journey ends.
-                      </p>
-                      <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-semibold">
-                        <WorkflowStep text="Assigned" />
-                        <span className="text-slate-300">→</span>
-                        <WorkflowStep text="Start Trip" />
-                        <span className="text-slate-300">→</span>
-                        <WorkflowStep text="Trip Updates" />
-                        <span className="text-slate-300">→</span>
-                        <WorkflowStep text="Complete" />
-                      </div>
-                    </div>
-                  </div>
-                </div> */}
               </>
             )}
           </div>
@@ -849,7 +927,7 @@ function TripDetailsModal({
   onClose: () => void;
   onUpdateStatus: (
     trip: Trip,
-    nextStatus: "IN_PROGRESS" | "COMPLETED",
+    nextStatus: "IN_PROGRESS" | "COMPLETED"
   ) => Promise<void>;
 }) {
   const status = getStatus(trip.status);
@@ -865,7 +943,7 @@ function TripDetailsModal({
 
   return (
     <div
-      className="fixed text-gray-600 inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-3 backdrop-blur-sm sm:p-5"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-3 text-gray-600 backdrop-blur-sm sm:p-5"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -902,7 +980,9 @@ function TripDetailsModal({
         <div className="space-y-6 p-5 sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-slate-50 p-4">
             <div>
-              <p className="text-xs font-medium text-slate-500">Current Status</p>
+              <p className="text-xs font-medium text-slate-500">
+                Current Status
+              </p>
               <div className="mt-2">
                 <StatusBadge status={status} />
               </div>
@@ -943,59 +1023,45 @@ function TripDetailsModal({
           <section>
             <SectionTitle>Assignment Information</SectionTitle>
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-xl border border-slate-200 p-4">
-                <div className="flex items-center gap-2 text-slate-500">
-                  <FiTruck />
-                  <span className="text-sm">Assigned Bus</span>
-                </div>
-                <p className="mt-2 font-bold text-slate-900">{getBusName(trip)}</p>
-                <p className="mt-1 text-xs text-slate-500">
-                  Bus ID: {trip.bus_id ?? "-"}
-                </p>
-              </div>
+              <DetailCard
+                icon={<FiTruck />}
+                label="Assigned Bus"
+                value={getBusName(trip)}
+                detail={`Bus ID: ${trip.bus_id ?? "-"}`}
+              />
 
-              <div className="rounded-xl border border-slate-200 p-4">
-                <div className="flex items-center gap-2 text-slate-500">
-                  <FiUser />
-                  <span className="text-sm">Operational Staff</span>
-                </div>
-                <p className="mt-2 font-bold text-slate-900">
-                  {trip.staff_name ||
-                    trip.staff_email ||
-                    (getTripStaffId(trip) !== null
-                      ? `Staff #${getTripStaffId(trip)}`
-                      : "Not available")}
-                </p>
-                {trip.staff_email && trip.staff_name && (
-                  <p className="mt-1 break-all text-xs text-slate-500">
-                    {trip.staff_email}
-                  </p>
-                )}
-              </div>
+              <DetailCard
+                icon={<FiUser />}
+                label="Operational Staff"
+                value={
+                  trip.staff_name ||
+                  trip.staff_email ||
+                  (getTripStaffId(trip) !== null
+                    ? `Staff #${getTripStaffId(trip)}`
+                    : "Not available")
+                }
+                detail={
+                  trip.staff_email && trip.staff_name
+                    ? trip.staff_email
+                    : undefined
+                }
+              />
 
-              <div className="rounded-xl border border-slate-200 p-4">
-                <div className="flex items-center gap-2 text-slate-500">
-                  <FiHash />
-                  <span className="text-sm">Assignment ID</span>
-                </div>
-                <p className="mt-2 font-bold text-slate-900">
-                  {trip.assignment_id ?? "-"}
-                </p>
-                <p className="mt-1 text-xs text-slate-500">
-                  Assignment status: {trip.assignment_status || "-"}
-                </p>
-              </div>
+              <DetailCard
+                icon={<FiHash />}
+                label="Assignment ID"
+                value={trip.assignment_id ?? "-"}
+                detail={`Assignment status: ${trip.assignment_status || "-"}`}
+              />
 
-              <div className="rounded-xl border border-slate-200 p-4">
-                <div className="flex items-center gap-2 text-slate-500">
-                  <FiMapPin />
-                  <span className="text-sm">Depot</span>
-                </div>
-                <p className="mt-2 font-bold text-slate-900">
-                  {trip.depot_name ||
-                    (trip.depot_id ? `Depot #${trip.depot_id}` : "Not available")}
-                </p>
-              </div>
+              <DetailCard
+                icon={<FiMapPin />}
+                label="Depot"
+                value={
+                  trip.depot_name ||
+                  (trip.depot_id ? `Depot #${trip.depot_id}` : "Not available")
+                }
+              />
             </div>
           </section>
 
@@ -1033,27 +1099,33 @@ function TripDetailsModal({
 
         <div className="flex flex-wrap justify-end gap-3 border-t border-slate-200 px-5 py-4 sm:px-6">
           {status === "SCHEDULED" && (
-            <button
-              type="button"
+            <ActionButton
               disabled={updating}
-              onClick={() => onUpdateStatus(trip, "IN_PROGRESS")}
-              className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-green-700 disabled:opacity-50"
-            >
-              <FiPlay />
-              {updating ? "Starting..." : "Start Trip"}
-            </button>
+              onClick={() => void onUpdateStatus(trip, "IN_PROGRESS")}
+              icon={<FiPlay />}
+              label={updating ? "Starting..." : "Start Trip"}
+              className="bg-green-600 hover:bg-green-700"
+            />
+          )}
+
+          {status === "DELAYED" && (
+            <ActionButton
+              disabled={updating}
+              onClick={() => void onUpdateStatus(trip, "IN_PROGRESS")}
+              icon={<FiPlay />}
+              label={updating ? "Resuming..." : "Resume Trip"}
+              className="bg-blue-600 hover:bg-blue-700"
+            />
           )}
 
           {(status === "IN_PROGRESS" || status === "DELAYED") && (
-            <button
-              type="button"
+            <ActionButton
               disabled={updating}
-              onClick={() => onUpdateStatus(trip, "COMPLETED")}
-              className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-50"
-            >
-              <FiCheckCircle />
-              {updating ? "Updating..." : "Complete Trip"}
-            </button>
+              onClick={() => void onUpdateStatus(trip, "COMPLETED")}
+              icon={<FiCheckCircle />}
+              label={updating ? "Updating..." : "Complete Trip"}
+              className="bg-red-600 hover:bg-red-700"
+            />
           )}
 
           <button
@@ -1088,6 +1160,31 @@ function DetailField({
     <div>
       <p className="text-xs text-slate-500">{label}</p>
       <p className="mt-1 break-words font-semibold text-slate-800">{value}</p>
+    </div>
+  );
+}
+
+function DetailCard({
+  icon,
+  label,
+  value,
+  detail,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: string | number;
+  detail?: string;
+}) {
+  return (
+    <div className="rounded-xl border border-slate-200 p-4">
+      <div className="flex items-center gap-2 text-slate-500">
+        {icon}
+        <span className="text-sm">{label}</span>
+      </div>
+      <p className="mt-2 break-words font-bold text-slate-900">{value}</p>
+      {detail && (
+        <p className="mt-1 break-all text-xs text-slate-500">{detail}</p>
+      )}
     </div>
   );
 }
@@ -1187,11 +1284,29 @@ function MobileInfo({
   );
 }
 
-function WorkflowStep({ text }: { text: string }) {
+function ActionButton({
+  disabled,
+  onClick,
+  icon,
+  label,
+  className,
+}: {
+  disabled?: boolean;
+  onClick: () => void;
+  icon: ReactNode;
+  label: string;
+  className: string;
+}) {
   return (
-    <span className="rounded-full bg-slate-100 px-3 py-1.5 text-slate-600">
-      {text}
-    </span>
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className={`inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
+    >
+      {icon}
+      {label}
+    </button>
   );
 }
 
@@ -1219,7 +1334,7 @@ function EmptyState({
           ? "Check the error message above and your backend API."
           : hasTrips
             ? "Try changing the search, date, or status filters."
-            : "No trips with a matching staff ID were returned. Check your assignments and GET /api/trips response."}
+            : "No trips with a matching staff ID were returned."}
       </p>
     </div>
   );
@@ -1238,4 +1353,3 @@ function LoadingState() {
     </div>
   );
 }
-

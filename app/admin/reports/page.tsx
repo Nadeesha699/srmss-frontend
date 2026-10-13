@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -123,10 +122,7 @@ const isDelayed = (trip: Trip) =>
   ["DELAYED", "LATE"].includes(upper(trip.status));
 
 const getTripDate = (trip: Trip) =>
-  trip.actual_start_time ||
-  trip.scheduled_departure ||
-  trip.created_at ||
-  "";
+  trip.actual_start_time || trip.scheduled_departure || trip.created_at || "";
 
 function formatDate(date: string) {
   if (!date) return "N/A";
@@ -147,7 +143,7 @@ function getDefaultDates() {
   const iso = (date: Date) =>
     `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
       2,
-      "0"
+      "0",
     )}-${String(date.getDate()).padStart(2, "0")}`;
 
   return { from: iso(first), to: iso(today) };
@@ -165,7 +161,7 @@ export default function ReportsPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [reportType, setReportType] = useState<ReportType>(
-    "Trip Performance Report"
+    "Trip Performance Report",
   );
   const [dates] = useState(getDefaultDates);
   const [fromDate, setFromDate] = useState(dates.from);
@@ -187,16 +183,10 @@ export default function ReportsPage() {
       ];
 
       const results = await Promise.allSettled(
-        endpoints.map((url) => axios.get(url))
+        endpoints.map((url) => axios.get(url)),
       );
 
-      const setters = [
-        setTrips,
-        setRoutes,
-        setBuses,
-        setUsers,
-        setMaintenance,
-      ];
+      const setters = [setTrips, setRoutes, setBuses, setUsers, setMaintenance];
 
       const names = ["trips", "routes", "buses", "users", "maintenance"];
       let failed = 0;
@@ -212,11 +202,11 @@ export default function ReportsPage() {
 
       if (failed === results.length) {
         setError(
-          "Unable to load report data. Check that your Express backend is running."
+          "Unable to load report data. Check that your Express backend is running.",
         );
       } else if (failed > 0) {
         setError(
-          `${failed} data source(s) could not be loaded. Some reports may be incomplete.`
+          `${failed} data source(s) could not be loaded. Some reports may be incomplete.`,
         );
       }
     } catch (err) {
@@ -246,45 +236,41 @@ export default function ReportsPage() {
   const delayedTrips = filteredTrips.filter(isDelayed).length;
 
   const onTimeTrips = filteredTrips.filter(
-    (trip) => isCompleted(trip) && !isDelayed(trip)
+    (trip) => isCompleted(trip) && !isDelayed(trip),
   ).length;
 
   const onTimeRate =
-    completedTrips > 0
-      ? Math.round((onTimeTrips / completedTrips) * 100)
-      : 0;
+    completedTrips > 0 ? Math.round((onTimeTrips / completedTrips) * 100) : 0;
 
   const activeBuses = buses.filter((bus) =>
     ["ACTIVE", "AVAILABLE", "IN_SERVICE", "ASSIGNED"].includes(
-      upper(bus.status)
-    )
+      upper(bus.status),
+    ),
   ).length;
 
   const availableBuses = buses.filter((bus) =>
-    ["AVAILABLE", "ACTIVE"].includes(upper(bus.status))
+    ["AVAILABLE", "ACTIVE"].includes(upper(bus.status)),
   ).length;
 
   const maintenanceBuses = buses.filter((bus) =>
-    ["MAINTENANCE", "UNDER_MAINTENANCE"].includes(upper(bus.status))
+    ["MAINTENANCE", "UNDER_MAINTENANCE"].includes(upper(bus.status)),
   ).length;
 
   const vehicleUtilization =
-    buses.length > 0
-      ? Math.round((activeBuses / buses.length) * 100)
-      : 0;
+    buses.length > 0 ? Math.round((activeBuses / buses.length) * 100) : 0;
 
   const operationalStaff = users.filter((user) =>
     ["OPERATIONAL_STAFF", "OPERATIONAL STAFF", "STAFF"].includes(
-      upper(user.role)
-    )
+      upper(user.role),
+    ),
   );
 
   const activeOperationalStaff = operationalStaff.filter((user) =>
-    ["ACTIVE", "AVAILABLE"].includes(upper(user.status))
+    ["ACTIVE", "AVAILABLE"].includes(upper(user.status)),
   ).length;
 
   const activeRoutes = routes.filter(
-    (route) => !route.status || upper(route.status) === "ACTIVE"
+    (route) => !route.status || upper(route.status) === "ACTIVE",
   ).length;
 
   const routeReports = useMemo<RouteReport[]>(() => {
@@ -295,13 +281,13 @@ export default function ReportsPage() {
             Number(trip.route_id) === Number(route.id)) ||
           (trip.route_code != null &&
             route.route_code != null &&
-            trip.route_code === route.route_code)
+            trip.route_code === route.route_code),
       );
 
       const completed = routeTrips.filter(isCompleted).length;
       const delayed = routeTrips.filter(isDelayed).length;
       const onTime = routeTrips.filter(
-        (trip) => isCompleted(trip) && !isDelayed(trip)
+        (trip) => isCompleted(trip) && !isDelayed(trip),
       ).length;
 
       return {
@@ -311,8 +297,7 @@ export default function ReportsPage() {
         trips: routeTrips.length,
         completed,
         delayed,
-        onTimeRate:
-          completed > 0 ? Math.round((onTime / completed) * 100) : 0,
+        onTimeRate: completed > 0 ? Math.round((onTime / completed) * 100) : 0,
       };
     });
   }, [routes, filteredTrips]);
@@ -336,6 +321,42 @@ export default function ReportsPage() {
       };
     });
   }, [filteredTrips]);
+
+  const formatDate = (value?: string | null): string => {
+    if (!value) return "N/A";
+
+    const datePart = value.slice(0, 10);
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(datePart)
+      ? new Date(`${datePart}T00:00:00`)
+      : new Date(value);
+
+    if (Number.isNaN(date.getTime())) return "N/A";
+
+    return date.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  };
+
+  const formatTime = (value?: string | null): string => {
+    if (!value) return "N/A";
+
+    const match = value.match(/(?:T|\s)?(\d{1,2}):(\d{2})/);
+
+    if (!match) return "N/A";
+
+    return `${match[1].padStart(2, "0")}:${match[2]}`;
+  };
+
+  const formatStatus = (value?: string | null): string => {
+    if (!value) return "Unknown";
+
+    return value
+      .toLowerCase()
+      .replaceAll("_", " ")
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+  };
 
   const generateReport = () => {
     if (!fromDate || !toDate) {
@@ -365,6 +386,7 @@ export default function ReportsPage() {
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
       const margin = 14;
+
       const red: [number, number, number] = [185, 28, 28];
       const dark: [number, number, number] = [20, 27, 43];
       const gray: [number, number, number] = [100, 116, 139];
@@ -375,14 +397,19 @@ export default function ReportsPage() {
       let description = "";
 
       switch (reportType) {
-        case "Trip Performance Report":
+        // ------------------------------------------
+        // TRIP PERFORMANCE REPORT
+        // ------------------------------------------
+        case "Trip Performance Report": {
           description = "Trip completion, delays and service reliability";
+
           metrics = [
             { label: "TOTAL TRIPS", value: String(totalTrips) },
             { label: "COMPLETED", value: String(completedTrips) },
             { label: "DELAYED", value: String(delayedTrips) },
             { label: "ON-TIME RATE", value: `${onTimeRate}%` },
           ];
+
           columns = [
             "Trip ID",
             "Route",
@@ -393,26 +420,34 @@ export default function ReportsPage() {
             "Departure",
             "Arrival",
           ];
+
           rows = filteredTrips.map((trip) => [
             trip.id,
             trip.route_code || trip.route_name || trip.route_id || "N/A",
             trip.registration_no || trip.bus_id || "N/A",
             trip.driver_name || trip.staff_name || "N/A",
-            trip.status || "N/A",
+            formatStatus(trip.status),
             Number(trip.delay_minutes || 0),
-            trip.actual_start_time || trip.scheduled_departure || "N/A",
-            trip.actual_end_time || trip.scheduled_arrival || "N/A",
+            formatTime(trip.actual_start_time || trip.scheduled_departure),
+            formatTime(trip.actual_end_time || trip.scheduled_arrival),
           ]);
-          break;
 
-        case "Route Performance Report":
+          break;
+        }
+
+        // ------------------------------------------
+        // ROUTE PERFORMANCE REPORT
+        // ------------------------------------------
+        case "Route Performance Report": {
           description = "Transport service activity by route";
+
           metrics = [
             { label: "TOTAL ROUTES", value: String(routes.length) },
             { label: "ACTIVE ROUTES", value: String(activeRoutes) },
             { label: "TOTAL TRIPS", value: String(totalTrips) },
             { label: "ON-TIME RATE", value: `${onTimeRate}%` },
           ];
+
           columns = [
             "Route",
             "Total Trips",
@@ -420,6 +455,7 @@ export default function ReportsPage() {
             "Delayed",
             "On-Time Rate",
           ];
+
           rows = routeReports.map((route) => [
             route.route,
             route.trips,
@@ -427,96 +463,143 @@ export default function ReportsPage() {
             route.delayed,
             `${route.onTimeRate}%`,
           ]);
-          break;
 
-        case "Vehicle Utilization Report":
+          break;
+        }
+
+        // ------------------------------------------
+        // VEHICLE UTILIZATION REPORT
+        // ------------------------------------------
+        case "Vehicle Utilization Report": {
           description = "Fleet status and vehicle availability";
+
           metrics = [
             { label: "TOTAL BUSES", value: String(buses.length) },
             { label: "ACTIVE / ASSIGNED", value: String(activeBuses) },
             { label: "AVAILABLE", value: String(availableBuses) },
             { label: "UTILIZATION", value: `${vehicleUtilization}%` },
           ];
+
           columns = ["Bus ID", "Registration Number", "Current Status"];
+
           rows = buses.map((bus) => [
             bus.id,
             bus.registration_no || "N/A",
-            bus.status || "N/A",
+            formatStatus(bus.status),
           ]);
-          break;
 
-        case "Operational Staff Performance Report":
+          break;
+        }
+
+        // ------------------------------------------
+        // OPERATIONAL STAFF PERFORMANCE REPORT
+        // ------------------------------------------
+        case "Operational Staff Performance Report": {
           description = "Operational staff account status overview";
+
           metrics = [
-            { label: "TOTAL STAFF", value: String(operationalStaff.length) },
-            { label: "ACTIVE STAFF", value: String(activeOperationalStaff) },
+            {
+              label: "TOTAL STAFF",
+              value: String(operationalStaff.length),
+            },
+            {
+              label: "ACTIVE STAFF",
+              value: String(activeOperationalStaff),
+            },
             {
               label: "OTHER STATUS",
-              value: String(
-                operationalStaff.length - activeOperationalStaff
-              ),
+              value: String(operationalStaff.length - activeOperationalStaff),
             },
             {
               label: "COMPLETED TRIPS",
               value: String(completedTrips),
             },
           ];
+
           columns = ["Staff ID", "Staff Name", "Role", "Account Status"];
+
           rows = operationalStaff.map((user) => [
             user.id,
             user.name || "N/A",
-            user.role || "OPERATIONAL_STAFF",
-            user.status || "UNKNOWN",
+            formatStatus(user.role || "OPERATIONAL_STAFF"),
+            formatStatus(user.status || "UNKNOWN"),
           ]);
-          break;
 
-        case "Maintenance Report":
+          break;
+        }
+
+        // ------------------------------------------
+        // MAINTENANCE REPORT
+        // ------------------------------------------
+        case "Maintenance Report": {
           description = "Vehicle maintenance record overview";
+
+          const filteredMaintenance = maintenance.filter((record) => {
+            const rawDate = record.maintenance_date || record.created_at || "";
+
+            const date = rawDate.slice(0, 10);
+
+            // Keep records without dates, as in the original method.
+            return !date || (date >= fromDate && date <= toDate);
+          });
+
           metrics = [
             {
               label: "MAINTENANCE RECORDS",
-              value: String(maintenance.length),
+              value: String(filteredMaintenance.length),
             },
             {
               label: "BUSES IN MAINTENANCE",
               value: String(maintenanceBuses),
             },
-            { label: "TOTAL BUSES", value: String(buses.length) },
+            {
+              label: "TOTAL BUSES",
+              value: String(buses.length),
+            },
             {
               label: "REPORT PERIOD",
-              value: `${fromDate} to ${toDate}`,
+              value: `${formatDate(fromDate)} - ${formatDate(toDate)}`,
             },
           ];
-          columns = ["Record ID", "Bus Registration", "Status", "Date"];
-          rows = maintenance
-            .filter((record) => {
-              const date = (
-                record.maintenance_date ||
-                record.created_at ||
-                ""
-              ).slice(0, 10);
 
-              // Until records have dates, retain them but mark the date N/A.
-              return !date || (date >= fromDate && date <= toDate);
-            })
-            .map((record) => [
-              record.id,
-              buses.find((bus) => bus.id === record.bus_id)
-                ?.registration_no ||
-                (record.bus_id ? `Bus ${record.bus_id}` : "N/A"),
-              record.status || "N/A",
-              record.maintenance_date || record.created_at || "N/A",
-            ]);
-          metrics[0].value = String(rows.length);
+          columns = ["Record ID", "Bus Registration", "Status", "Date"];
+
+          rows = filteredMaintenance.map((record) => [
+            record.id,
+            buses.find((bus) => bus.id === record.bus_id)?.registration_no ||
+              (record.bus_id ? `Bus ${record.bus_id}` : "N/A"),
+            formatStatus(record.status),
+            formatDate(record.maintenance_date || record.created_at),
+          ]);
+
           break;
+        }
+
+        default:
+          toast.error("Please select a valid report type.");
+          return;
       }
 
+      // ------------------------------------------
+      // REPORT METADATA
+      // ------------------------------------------
       const reportId = `SRMSS-${Date.now().toString().slice(-8)}`;
-      const generatedAt = new Date().toLocaleString("en-GB");
 
-      // Branded report banner.
+      const generatedAt = new Date().toLocaleString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      });
+
+      // ------------------------------------------
+      // HEADER BANNER
+      // ------------------------------------------
       doc.setFillColor(...dark);
       doc.rect(0, 0, pageWidth, 42, "F");
+
       doc.setFillColor(...red);
       doc.rect(0, 0, 5, 42, "F");
 
@@ -533,16 +616,18 @@ export default function ReportsPage() {
       doc.setFont("helvetica", "bold");
       doc.setFontSize(15);
       doc.setTextColor(255, 255, 255);
-      doc.text("MANAGEMENT REPORT", pageWidth - margin, 15, {
-        align: "right",
-      });
+      doc.text("MANAGEMENT REPORT", pageWidth - margin, 15, { align: "right" });
 
       doc.setFont("helvetica", "normal");
       doc.setFontSize(9);
       doc.setTextColor(226, 232, 240);
-      doc.text(reportId, pageWidth - margin, 22, { align: "right" });
+      doc.text(reportId, pageWidth - margin, 22, {
+        align: "right",
+      });
 
-      // Report title and date range.
+      // ------------------------------------------
+      // REPORT TITLE AND DATE RANGE
+      // ------------------------------------------
       doc.setTextColor(...dark);
       doc.setFont("helvetica", "bold");
       doc.setFontSize(15);
@@ -565,17 +650,18 @@ export default function ReportsPage() {
         `${formatDate(fromDate)} - ${formatDate(toDate)}`,
         pageWidth - margin,
         58,
-        { align: "right" }
+        { align: "right" },
       );
 
       doc.setDrawColor(226, 232, 240);
       doc.line(margin, 65, pageWidth - margin, 65);
 
-      // KPI summary cards.
+      // ------------------------------------------
+      // KPI SUMMARY CARDS
+      // ------------------------------------------
       const gap = 5;
       const cardWidth =
-        (pageWidth - margin * 2 - gap * (metrics.length - 1)) /
-        metrics.length;
+        (pageWidth - margin * 2 - gap * (metrics.length - 1)) / metrics.length;
 
       metrics.forEach((metric, index) => {
         const x = margin + index * (cardWidth + gap);
@@ -595,10 +681,15 @@ export default function ReportsPage() {
 
         doc.setFontSize(13);
         doc.setTextColor(...dark);
+
         const value = doc.splitTextToSize(metric.value, cardWidth - 10);
+
         doc.text(value[0], x + 5, y + 16);
       });
 
+      // ------------------------------------------
+      // DETAILED RECORDS TABLE
+      // ------------------------------------------
       doc.setFont("helvetica", "bold");
       doc.setFontSize(10);
       doc.setTextColor(...dark);
@@ -610,8 +701,17 @@ export default function ReportsPage() {
         body:
           rows.length > 0
             ? rows.map((row) => row.map((value) => String(value)))
-            : [["No records found for this report."]],
-        margin: { left: margin, right: margin, bottom: 19 },
+            : [
+                [
+                  "No records found for this report.",
+                  ...columns.slice(1).map(() => ""),
+                ],
+              ],
+        margin: {
+          left: margin,
+          right: margin,
+          bottom: 19,
+        },
         theme: "grid",
         styles: {
           font: "helvetica",
@@ -637,25 +737,31 @@ export default function ReportsPage() {
             margin,
             pageHeight - 13,
             pageWidth - margin,
-            pageHeight - 13
+            pageHeight - 13,
           );
 
           doc.setFont("helvetica", "normal");
           doc.setFontSize(8);
           doc.setTextColor(...gray);
+
           doc.text("SRMSS | Management Reports", margin, pageHeight - 7);
+
           doc.text(generatedAt, pageWidth / 2, pageHeight - 7, {
             align: "center",
           });
+
           doc.text(
             `Page ${doc.getNumberOfPages()}`,
             pageWidth - margin,
             pageHeight - 7,
-            { align: "right" }
+            { align: "right" },
           );
         },
       });
 
+      // ------------------------------------------
+      // DOWNLOAD PDF
+      // ------------------------------------------
       const filename = `SRMSS-${reportType
         .toLowerCase()
         .replaceAll(" ", "-")}-${fromDate}-${toDate}.pdf`;
@@ -664,9 +770,11 @@ export default function ReportsPage() {
 
       setGeneratedReport(
         `${reportType} was generated for ${formatDate(
-          fromDate
-        )} to ${formatDate(toDate)}.`
+          fromDate,
+        )} to ${formatDate(toDate)}.`,
       );
+
+      toast.success("Report generated successfully.");
     } catch (err) {
       console.error("PDF generation error:", err);
       toast.error("Unable to generate the PDF. Please try again.");
@@ -679,7 +787,7 @@ export default function ReportsPage() {
 
   const maxChartValue = Math.max(
     1,
-    ...weeklyTrips.flatMap((day) => [day.completed, day.delayed])
+    ...weeklyTrips.flatMap((day) => [day.completed, day.delayed]),
   );
 
   if (loading) {
@@ -743,15 +851,14 @@ export default function ReportsPage() {
           <div className="mx-auto max-w-7xl space-y-6">
             <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
               <div>
-               <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+                <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
                   Reports & Analytics
                 </h1>
                 <p className="mt-2 max-w-2xl text-sm text-slate-500">
-                  Review trip performance, fleet utilization, route
-                  reliability and operational records.
+                  Review trip performance, fleet utilization, route reliability
+                  and operational records.
                 </p>
               </div>
-
             </div>
 
             {error && (
@@ -770,9 +877,7 @@ export default function ReportsPage() {
                   <FiCalendar size={21} />
                 </div>
                 <div>
-                  <h2 className="font-bold text-slate-900">
-                    Reporting Period
-                  </h2>
+                  <h2 className="font-bold text-slate-900">Reporting Period</h2>
                   <p className="text-sm text-slate-500">
                     Choose dates to filter trip and route statistics.
                   </p>
@@ -810,9 +915,7 @@ export default function ReportsPage() {
                     disabled={refreshing}
                     className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
                   >
-                    <FiRefreshCw
-                      className={refreshing ? "animate-spin" : ""}
-                    />
+                    <FiRefreshCw className={refreshing ? "animate-spin" : ""} />
                     Refresh Data
                   </button>
                 </div>
@@ -941,9 +1044,7 @@ export default function ReportsPage() {
               <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                 <div className="mb-6 flex items-center justify-between">
                   <div>
-                    <h2 className="font-bold text-slate-900">
-                      Fleet Overview
-                    </h2>
+                    <h2 className="font-bold text-slate-900">Fleet Overview</h2>
                     <p className="text-sm text-slate-500">
                       Current bus status distribution
                     </p>
@@ -988,9 +1089,7 @@ export default function ReportsPage() {
                     </p>
                   </div>
                   <div className="rounded-xl bg-slate-50 p-4">
-                    <p className="text-sm text-slate-500">
-                      In maintenance
-                    </p>
+                    <p className="text-sm text-slate-500">In maintenance</p>
                     <p className="mt-1 text-2xl font-bold text-slate-900">
                       {maintenanceBuses}
                     </p>
@@ -1050,9 +1149,7 @@ export default function ReportsPage() {
                           <td className="p-4 font-semibold text-slate-800">
                             {route.route}
                           </td>
-                          <td className="p-4 text-slate-600">
-                            {route.trips}
-                          </td>
+                          <td className="p-4 text-slate-600">{route.trips}</td>
                           <td className="p-4 font-semibold text-green-600">
                             {route.completed}
                           </td>
@@ -1156,9 +1253,7 @@ export default function ReportsPage() {
                   ) : (
                     <FiDownload size={18} />
                   )}
-                  {reporting
-                    ? "Generating PDF..."
-                    : "Generate & Download PDF"}
+                  {reporting ? "Generating PDF..." : "Generate & Download PDF"}
                 </button>
               </div>
 
@@ -1219,7 +1314,7 @@ export default function ReportsPage() {
             </section>
           </div>
         </div>
-        <ToastContainer/>
+        <ToastContainer />
       </main>
     </div>
   );
@@ -1277,13 +1372,7 @@ function SmallStat({
   );
 }
 
-function Progress({
-  label,
-  value,
-}: {
-  label: string;
-  value: number;
-}) {
+function Progress({ label, value }: { label: string; value: number }) {
   const safeValue = Math.max(0, Math.min(value, 100));
 
   return (
@@ -1302,13 +1391,7 @@ function Progress({
   );
 }
 
-function Legend({
-  className,
-  label,
-}: {
-  className: string;
-  label: string;
-}) {
+function Legend({ className, label }: { className: string; label: string }) {
   return (
     <div className="flex items-center gap-2">
       <span className={`h-3 w-3 rounded-sm ${className}`} />

@@ -22,7 +22,7 @@ import {
   FiAlertCircle,
   FiClock,
 } from "react-icons/fi";
-
+import Swal from "sweetalert2";
 import { AdminSidebar } from "@/components/SideNavBar/AdminSideNavBar";
 
 import {
@@ -33,9 +33,6 @@ import {
   updateRouteStatus,
 } from "@/services/routesService";
 
-/* =========================================================
-   TYPES
-========================================================= */
 
 type RouteStatus = "ACTIVE" | "INACTIVE";
 
@@ -425,9 +422,7 @@ export default function RoutesPage() {
     }
   };
 
-  /* =========================================================
-     DELETE
-  ========================================================= */
+
 
   const deleteRoute = async (
     id: number
@@ -438,12 +433,22 @@ export default function RoutesPage() {
 
     if (!route) return;
 
-    const confirmed =
-      window.confirm(
-        `Are you sure you want to delete ${route.route_code} - ${route.name}?`
-      );
+    
 
-    if (!confirmed) return;
+const result = await Swal.fire({
+  title: "Delete Route?",
+  text: `Are you sure you want to delete ${route.route_code} - ${route.name}?`,
+  icon: "warning",
+  showCancelButton: true,
+  confirmButtonColor: "#dc2626",
+  cancelButtonColor: "#64748b",
+  confirmButtonText: "Yes, delete it",
+  cancelButtonText: "Cancel",
+  reverseButtons: true,
+});
+
+if (!result.isConfirmed) return;
+
 
     try {
       setDeletingId(id);
@@ -471,9 +476,6 @@ export default function RoutesPage() {
     }
   };
 
-  /* =========================================================
-     TOGGLE STATUS
-  ========================================================= */
 
   const toggleRouteStatus = async (
     route: TransportRoute

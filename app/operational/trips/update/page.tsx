@@ -1,7 +1,7 @@
 
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import {
   FiActivity,
@@ -10,7 +10,6 @@ import {
   FiCheckCircle,
   FiClock,
   FiMenu,
-  FiMessageSquare,
   FiPlay,
   FiRefreshCw,
   FiSearch,
@@ -144,6 +143,10 @@ function getRoute(trip: Trip) {
     return `${trip.start_point} → ${trip.end_point}`;
   }
 
+  if (trip.origin && trip.destination) {
+    return `${trip.origin} → ${trip.destination}`;
+  }
+
   return trip.route_code || "Route not available";
 }
 
@@ -191,13 +194,11 @@ function formatDateTime(value?: string) {
 function formatTime(value?: string) {
   if (!value) return "--:--";
 
-  // MySQL TIME values often arrive as "HH:mm:ss".
   if (/^\d{2}:\d{2}(:\d{2})?$/.test(value)) {
     return value.substring(0, 5);
   }
 
   const date = new Date(value);
-
   if (Number.isNaN(date.getTime())) return value.substring(0, 5);
 
   return date.toLocaleTimeString("en-LK", {
@@ -248,6 +249,7 @@ export default function TripUpdatesPage() {
       const allTrips = extractArray<Trip>(tripsResponse.data);
       const allDelays = extractArray<Delay>(delaysResponse.data);
 
+      // This assumes the trips API returns the operational staff ID.
       const staffTrips = allTrips.filter(
         (trip) => Number(getStaffId(trip)) === Number(staffId)
       );
@@ -271,7 +273,9 @@ export default function TripUpdatesPage() {
     setUser(loggedUser);
 
     if (!loggedUser?.id) {
-      setError("Operational Staff account information was not found. Please sign in again.");
+      setError(
+        "Operational Staff account information was not found. Please sign in again."
+      );
       setLoading(false);
       return;
     }
@@ -283,7 +287,6 @@ export default function TripUpdatesPage() {
     if (!user?.id) return;
 
     setRefreshing(true);
-
     try {
       await loadData(user.id);
     } finally {
@@ -293,21 +296,26 @@ export default function TripUpdatesPage() {
 
   async function updateTrip(
     trip: Trip,
-    status: "IN_PROGRESS" | "COMPLETED"
+    nextStatus: "IN_PROGRESS" | "COMPLETED"
   ) {
     if (!user?.id) {
-      setError("Your login session could not be identified. Please sign in again.");
+      setError("Your session could not be identified. Please sign in again.");
       return;
     }
 
-    if (status === "IN_PROGRESS" && normalizeStatus(trip.status) !== "SCHEDULED") {
-      setError("Only scheduled trips can be started.");
+    const currentStatus = normalizeStatus(trip.status);
+
+    if (
+      nextStatus === "IN_PROGRESS" &&
+      !["SCHEDULED", "DELAYED"].includes(currentStatus)
+    ) {
+      setError("Only scheduled or delayed trips can be started or resumed.");
       return;
     }
 
     if (
-      status === "COMPLETED" &&
-      !["IN_PROGRESS", "DELAYED"].includes(normalizeStatus(trip.status))
+      nextStatus === "COMPLETED" &&
+      !["IN_PROGRESS", "DELAYED"].includes(currentStatus)
     ) {
       setError("Only trips in progress or delayed trips can be completed.");
       return;
@@ -320,24 +328,24 @@ export default function TripUpdatesPage() {
 
       const now = new Date().toISOString();
 
-      const payload = {
-        status,
+      await axios.patch(`${TRIP_API}/${trip.id}/status`, {
+        status: nextStatus,
         actual_start_time:
-          status === "IN_PROGRESS"
+          nextStatus === "IN_PROGRESS"
             ? trip.actual_start_time || now
             : trip.actual_start_time || null,
         actual_end_time:
-          status === "COMPLETED"
+          nextStatus === "COMPLETED"
             ? now
             : trip.actual_end_time || null,
-      };
-
-      await axios.patch(`${TRIP_API}/${trip.id}/status`, payload);
+      });
 
       setNotice(
-        status === "IN_PROGRESS"
-          ? `${getTripNumber(trip)} started successfully.`
-          : `${getTripNumber(trip)} completed successfully.`
+        nextStatus === "COMPLETED"
+          ? `${getTripNumber(trip)} completed successfully.`
+          : currentStatus === "DELAYED"
+            ? `${getTripNumber(trip)} resumed successfully.`
+            : `${getTripNumber(trip)} started successfully.`
       );
 
       await loadData(user.id);
@@ -376,9 +384,10 @@ export default function TripUpdatesPage() {
     }
 
     const delayMinutes = Number(delayForm.delay_minutes);
+    const currentStatus = normalizeStatus(selectedTrip.status);
 
-    if (!Number.isFinite(delayMinutes) || delayMinutes <= 0) {
-      setError("Please enter a valid delay duration greater than zero.");
+    if (!Number.isInteger(delayMinutes) || delayMinutes <= 0) {
+      setError("Enter a whole-number delay duration greater than zero.");
       return;
     }
 
@@ -387,11 +396,7 @@ export default function TripUpdatesPage() {
       return;
     }
 
-    if (
-      !["IN_PROGRESS", "DELAYED"].includes(
-        normalizeStatus(selectedTrip.status)
-      )
-    ) {
+    if (!["IN_PROGRESS", "DELAYED"].includes(currentStatus)) {
       setError("A delay can only be reported for a trip in progress or already delayed.");
       return;
     }
@@ -401,20 +406,22 @@ export default function TripUpdatesPage() {
       setError("");
       setNotice("");
 
-      await axios.post(DELAY_API, {
+      const payload =  {
         trip_id: selectedTrip.id,
         delay_minutes: delayMinutes,
         reason: delayForm.reason,
         notes: delayForm.description.trim() || null,
-        reported_by: user.id,
-      });
+        recorded_by: user.id,
+      }
 
-      // The delay record has been saved. Update the trip status next.
+      // Step 1: Save the delay record.
+      await axios.post(DELAY_API,payload);
+
       try {
-        await axios.patch(`${TRIP_API}/${selectedTrip.id}/status`, {
+        await axios.put(`${TRIP_API}/${selectedTrip.id}/`, {
           status: "DELAYED",
           actual_start_time: selectedTrip.actual_start_time || null,
-          actual_end_time: selectedTrip.actual_end_time || null,
+          actual_end_time: null,
         });
 
         setNotice(`Delay recorded for ${getTripNumber(selectedTrip)}.`);
@@ -422,7 +429,7 @@ export default function TripUpdatesPage() {
         console.error("Delay saved, but trip status update failed:", statusError);
 
         setNotice(
-          "The delay report was saved, but the trip status could not be updated. Please refresh and check the trip."
+          "The delay report was saved, but the trip status could not be updated. Refresh and check the trip status."
         );
       }
 
@@ -442,8 +449,10 @@ export default function TripUpdatesPage() {
 
     return trips
       .filter((trip) => {
-        if (statusFilter === "ALL") return true;
-        return normalizeStatus(trip.status) === statusFilter;
+        return (
+          statusFilter === "ALL" ||
+          normalizeStatus(trip.status) === statusFilter
+        );
       })
       .filter((trip) => {
         if (!search) return true;
@@ -455,6 +464,8 @@ export default function TripUpdatesPage() {
           trip.route_name,
           trip.start_point,
           trip.end_point,
+          trip.origin,
+          trip.destination,
           getBus(trip),
           trip.status,
         ]
@@ -515,7 +526,9 @@ export default function TripUpdatesPage() {
               <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
                 Operational Staff
               </p>
-              <p className="font-semibold text-slate-800">SRMSS Management Portal</p>
+              <p className="font-semibold text-slate-800">
+                SRMSS Management Portal
+              </p>
             </div>
           </div>
 
@@ -536,10 +549,11 @@ export default function TripUpdatesPage() {
           <div className="mx-auto max-w-7xl">
             <div className="mb-8">
               <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
-                 Trip Updates
+                Trip Updates
               </h1>
               <p className="mt-1 max-w-2xl text-sm text-slate-500">
-                  Start trips, report delays, and update the progress of your assigned trips.
+                Start trips, report delays, resume delayed journeys, and update
+                the progress of your assigned trips.
               </p>
             </div>
 
@@ -613,7 +627,7 @@ export default function TripUpdatesPage() {
                   />
                 </div>
 
-                <div className="mt-6 text-gray-600 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                   <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div className="relative w-full md:max-w-md">
                       <FiSearch
@@ -624,7 +638,7 @@ export default function TripUpdatesPage() {
                         value={searchValue}
                         onChange={(event) => setSearchValue(event.target.value)}
                         placeholder="Search trip, route, bus..."
-                        className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-10 text-sm outline-none transition focus:border-red-400 focus:bg-white focus:ring-2 focus:ring-red-100"
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-10 text-sm text-slate-700 outline-none transition focus:border-red-400 focus:bg-white focus:ring-2 focus:ring-red-100"
                       />
                       {searchValue && (
                         <button
@@ -643,7 +657,7 @@ export default function TripUpdatesPage() {
                       onChange={(event) =>
                         setStatusFilter(event.target.value as StatusFilter)
                       }
-                      className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100"
+                      className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100"
                     >
                       <option value="ALL">All Status</option>
                       <option value="SCHEDULED">Scheduled</option>
@@ -653,6 +667,7 @@ export default function TripUpdatesPage() {
                       <option value="CANCELLED">Cancelled</option>
                     </select>
                   </div>
+
                   <p className="mt-3 text-xs text-slate-400">
                     Showing {filteredTrips.length} of {trips.length} assigned trips
                   </p>
@@ -676,6 +691,7 @@ export default function TripUpdatesPage() {
                           status={normalizeStatus(trip.status)}
                           updating={updatingTripId === trip.id}
                           onStart={() => updateTrip(trip, "IN_PROGRESS")}
+                          onResume={() => updateTrip(trip, "IN_PROGRESS")}
                           onComplete={() => updateTrip(trip, "COMPLETED")}
                           onDelay={() => openDelayModal(trip)}
                         />
@@ -695,7 +711,7 @@ export default function TripUpdatesPage() {
                           My Recent Delay Reports
                         </h2>
                         <p className="mt-1 text-sm text-slate-500">
-                          Delays reported by you
+                          Delay reports submitted by you
                         </p>
                       </div>
                     </div>
@@ -703,7 +719,10 @@ export default function TripUpdatesPage() {
 
                   {delays.length === 0 ? (
                     <div className="p-8 text-center">
-                      <FiCheckCircle className="mx-auto text-green-500" size={28} />
+                      <FiCheckCircle
+                        className="mx-auto text-green-500"
+                        size={28}
+                      />
                       <p className="mt-3 font-semibold text-slate-800">
                         No delay reports
                       </p>
@@ -733,9 +752,9 @@ export default function TripUpdatesPage() {
                               <p className="mt-1 text-sm text-slate-500">
                                 {delay.reason || "Delay reported"}
                               </p>
-                              {( delay.notes) && (
+                              {delay.notes && (
                                 <p className="mt-1 text-xs text-slate-400">
-                                  { delay.notes}
+                                  {delay.notes}
                                 </p>
                               )}
                             </div>
@@ -752,33 +771,6 @@ export default function TripUpdatesPage() {
                     </div>
                   )}
                 </div>
-
-                {/* <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                  <h2 className="font-bold text-slate-900">Trip Update Workflow</h2>
-                  <p className="mt-1 text-sm text-slate-500">
-                    Keep trip statuses updated throughout the journey.
-                  </p>
-
-                  <div className="mt-5 flex flex-wrap items-center gap-2">
-                    <WorkflowStep text="SCHEDULED" active />
-                    <span className="text-slate-300">→</span>
-                    <WorkflowStep text="START TRIP" />
-                    <span className="text-slate-300">→</span>
-                    <WorkflowStep text="IN PROGRESS" />
-                    <span className="text-slate-300">→</span>
-                    <WorkflowStep text="COMPLETE" />
-                  </div>
-
-                  <div className="mt-5 rounded-xl border border-amber-100 bg-amber-50 p-4">
-                    <div className="flex items-start gap-3">
-                      <FiMessageSquare className="mt-0.5 shrink-0 text-amber-600" />
-                      <p className="text-sm leading-6 text-amber-800">
-                        If a trip is delayed, use <strong>Report Delay</strong>.
-                        Your supervisor can then monitor the recorded delay.
-                      </p>
-                    </div>
-                  </div>
-                </div> */}
               </>
             )}
           </div>
@@ -830,7 +822,7 @@ export default function TripUpdatesPage() {
                     }))
                   }
                   placeholder="Example: 20"
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100"
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100"
                   required
                 />
               </div>
@@ -847,7 +839,7 @@ export default function TripUpdatesPage() {
                       reason: event.target.value,
                     }))
                   }
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100"
                   required
                 >
                   <option value="">Select delay reason</option>
@@ -862,7 +854,9 @@ export default function TripUpdatesPage() {
               <div>
                 <label className="mb-2 block text-sm font-semibold text-slate-700">
                   Description{" "}
-                  <span className="font-normal text-slate-400">(Optional)</span>
+                  <span className="font-normal text-slate-400">
+                    (Optional)
+                  </span>
                 </label>
                 <textarea
                   rows={4}
@@ -875,7 +869,7 @@ export default function TripUpdatesPage() {
                     }))
                   }
                   placeholder="Describe what caused the delay..."
-                  className="w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100"
+                  className="w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100"
                 />
               </div>
 
@@ -910,6 +904,7 @@ function TripUpdateCard({
   status,
   updating,
   onStart,
+  onResume,
   onComplete,
   onDelay,
 }: {
@@ -917,10 +912,12 @@ function TripUpdateCard({
   status: TripStatus;
   updating: boolean;
   onStart: () => void;
+  onResume: () => void;
   onComplete: () => void;
   onDelay: () => void;
 }) {
   const canStart = status === "SCHEDULED";
+  const canResume = status === "DELAYED";
   const canReportDelay = status === "IN_PROGRESS" || status === "DELAYED";
   const canComplete = status === "IN_PROGRESS" || status === "DELAYED";
 
@@ -956,7 +953,7 @@ function TripUpdateCard({
         <InfoBox
           icon={<FiCalendar />}
           label="Date"
-          value={formatDate(trip.departure_time)}
+          value={formatDate(trip.schedule_date || trip.departure_time)}
         />
         <InfoBox
           icon={<FiClock />}
@@ -975,7 +972,9 @@ function TripUpdateCard({
           <div className="grid gap-4 sm:grid-cols-2">
             {trip.actual_start_time && (
               <div>
-                <p className="text-xs font-medium text-slate-400">Actual Start</p>
+                <p className="text-xs font-medium text-slate-400">
+                  Actual Start
+                </p>
                 <p className="mt-1 text-sm font-semibold text-slate-700">
                   {formatDateTime(trip.actual_start_time)}
                 </p>
@@ -983,13 +982,25 @@ function TripUpdateCard({
             )}
             {trip.actual_end_time && (
               <div>
-                <p className="text-xs font-medium text-slate-400">Actual End</p>
+                <p className="text-xs font-medium text-slate-400">
+                  Actual End
+                </p>
                 <p className="mt-1 text-sm font-semibold text-slate-700">
                   {formatDateTime(trip.actual_end_time)}
                 </p>
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {status === "DELAYED" && (
+        <div className="mt-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+          <FiAlertTriangle className="mt-0.5 shrink-0" />
+          <p>
+            This trip has a reported delay. Resume the trip when the journey
+            continues, or complete it if the journey has finished.
+          </p>
         </div>
       )}
 
@@ -1003,6 +1014,18 @@ function TripUpdateCard({
           >
             <FiPlay />
             {updating ? "Starting..." : "Start Trip"}
+          </button>
+        )}
+
+        {canResume && (
+          <button
+            type="button"
+            onClick={onResume}
+            disabled={updating}
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none"
+          >
+            <FiPlay />
+            {updating ? "Resuming..." : "Resume Trip"}
           </button>
         )}
 
@@ -1053,7 +1076,7 @@ function InfoBox({
   label,
   value,
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   label: string;
   value: string;
 }) {
@@ -1105,7 +1128,7 @@ function SummaryCard({
   title: string;
   value: number;
   description: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
 }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
@@ -1120,24 +1143,6 @@ function SummaryCard({
         </div>
       </div>
     </div>
-  );
-}
-
-function WorkflowStep({
-  text,
-  active = false,
-}: {
-  text: string;
-  active?: boolean;
-}) {
-  return (
-    <span
-      className={`rounded-full px-3 py-1.5 text-xs font-bold ${
-        active ? "bg-red-50 text-red-600" : "bg-slate-100 text-slate-600"
-      }`}
-    >
-      {text}
-    </span>
   );
 }
 
@@ -1159,7 +1164,7 @@ function EmptyState({
       <p className="mx-auto mt-1 max-w-md text-sm text-slate-500">
         {hasTrips
           ? "Try changing your search text or status filter."
-          : "Trips assigned to your Operational Staff account will appear here. If you expect trips, check the staff ID returned by the trips API."}
+          : "Trips assigned to your Operational Staff account will appear here."}
       </p>
       {hasTrips && (
         <button
@@ -1191,4 +1196,3 @@ function LoadingState() {
     </div>
   );
 }
-
