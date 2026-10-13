@@ -288,13 +288,10 @@ export default function SupervisorFuelRecordsPage() {
               </button>
 
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-red-600">
-                  Depot Management
-                </p>
-                <h1 className="text-xl font-bold">
-                  Fuel Records
+                <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+                 Fuel Records
                 </h1>
-                <p className="mt-1 text-sm text-slate-500">
+                <p className="mt-1 max-w-2xl text-sm text-slate-500">
                   View fuel consumption and costs for your depot.
                 </p>
               </div>

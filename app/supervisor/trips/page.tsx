@@ -297,15 +297,12 @@ export default function SupervisorTripsPage() {
               </button>
 
               <div>
-                <p className="text-sm font-medium text-red-600">
-                  Supervisor Workspace
-                </p>
 
-                <h1 className="text-3xl font-bold text-slate-900">
+                <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
                   Trip Monitoring
                 </h1>
 
-                <p className="mt-1 text-sm text-slate-500">
+                <p className="mt-1 max-w-2xl text-sm text-slate-500">
                   Monitor scheduled, active, delayed and completed trips.
                 </p>
               </div>

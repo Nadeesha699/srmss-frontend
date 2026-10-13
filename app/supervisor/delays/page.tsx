@@ -408,14 +408,11 @@ export default function SupervisorDelaysPage() {
         <div className="p-4 sm:p-6 lg:p-8">
           <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
             <div>
-              <p className="text-sm font-medium text-red-600">
-                Supervisor Workspace
-              </p>
-              <h1 className="mt-1 text-3xl font-bold text-slate-900">
-                Delay Management
+              <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+                  Delay Management
               </h1>
-              <p className="mt-1 text-sm text-slate-500">
-                Record and monitor delay reports for your depot.
+             <p className="mt-1 max-w-2xl text-sm text-slate-500">
+                 Record and monitor delay reports for your depot.
               </p>
             </div>
 

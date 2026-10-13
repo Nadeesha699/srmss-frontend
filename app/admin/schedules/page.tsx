@@ -492,10 +492,7 @@ export default function AdminSchedulesPage() {
 
 
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-red-600">
-                  SRMSS Management Portal
-                </p>
-                <h1 className="mt-1 text-xl font-bold sm:text-2xl">
+               <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
                   Schedule Management
                 </h1>
                 <p className="mt-1 hidden text-sm text-slate-500 sm:block">

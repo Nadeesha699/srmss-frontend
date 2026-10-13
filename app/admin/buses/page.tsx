@@ -568,7 +568,7 @@ const filteredBuses = buses.filter((bus) => {
             {/* Page Header */}
             <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
               <div>
-                <h1 className="text-2xl font-bold text-slate-900">
+               <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
                   Bus Management
                 </h1>
 

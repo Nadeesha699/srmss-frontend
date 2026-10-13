@@ -263,22 +263,13 @@ export default function SupervisorDriversPage() {
           <div className="mx-auto max-w-7xl">
             <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
               <div>
-                <div className="mb-2 flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-600">
-                    SRMSS
-                  </span>
-                  <span className="text-xs text-slate-400">
-                    Depot Operations
-                  </span>
-                </div>
 
-                <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
-                  Depot Driver Overview
+                 <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+                 Depot Driver Overview
                 </h1>
 
-                <p className="mt-2 flex items-center gap-2 text-sm text-slate-500">
-                  <FiMapPin className="shrink-0 text-red-500" />
-                  {depotName} · View drivers assigned to your depot
+                <p className="mt-1 max-w-2xl text-sm text-slate-500">
+                  View drivers assigned to your depot
                 </p>
               </div>
             </div>

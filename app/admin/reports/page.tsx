@@ -742,10 +742,7 @@ export default function ReportsPage() {
           <div className="mx-auto max-w-7xl space-y-6">
             <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
               <div>
-                <p className="text-sm font-semibold text-red-600">
-                  Administration
-                </p>
-                <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">
+               <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
                   Reports & Analytics
                 </h1>
                 <p className="mt-2 max-w-2xl text-sm text-slate-500">

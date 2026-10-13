@@ -451,11 +451,11 @@ export default function OperationalStaffFuelRecordsPage() {
          
 
               <div>
-                <h1 className="text-xl font-bold text-slate-900">
+                 <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
                   Fuel Records
                 </h1>
-                <p className="mt-1 text-sm text-slate-500">
-                  Record and monitor fuel usage for operational vehicles.
+                 <p className="mt-1 max-w-2xl text-sm text-slate-500">
+                 Record and monitor fuel usage for operational vehicles.
                 </p>
               </div>
             </div>

@@ -482,7 +482,7 @@ export default function DepotsPage() {
             <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
               <div>
 
-                <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+                <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
                   Transport Depots
                 </h1>
 

@@ -452,17 +452,9 @@ export default function DriversPage() {
           <div className="mx-auto max-w-7xl">
             <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
               <div>
-                <div className="mb-2 flex items-center gap-2">
-                  <span className="rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-600">
-                    SRMSS
-                  </span>
-                  <span className="text-xs text-slate-400">
-                    Administration
-                  </span>
-                </div>
 
-                <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
-                  Driver Management
+                <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+                   Driver Management
                 </h1>
 
                 <p className="mt-1 text-sm text-slate-500">

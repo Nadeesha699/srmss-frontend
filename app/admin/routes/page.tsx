@@ -514,10 +514,6 @@ export default function RoutesPage() {
     }
   };
 
-  /* =========================================================
-     UI
-  ========================================================= */
-
   return (
     <div className="min-h-screen bg-slate-50">
       <AdminSidebar
@@ -560,7 +556,7 @@ export default function RoutesPage() {
 
             <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
               <div>
-                <h1 className="text-2xl font-bold text-slate-900">
+                <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
                   Route Management
                 </h1>
 

@@ -501,14 +501,11 @@ export default function AssignmentsPage() {
         <div className="p-4 md:p-6 lg:p-8">
           <div className="mx-auto max-w-6xl">
             <div className="mb-8">
-              <p className="text-sm font-semibold text-red-600">
-                Resource Allocation
-              </p>
-              <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">
-                Trip Assignments
+              <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+                  Trip Assignments
               </h1>
-              <p className="mt-2 text-slate-500">
-                Assign a schedule, bus, driver, and operational staff member to
+               <p className="mt-1 max-w-2xl text-sm text-slate-500">
+                 Assign a schedule, bus, driver, and operational staff member to
                 a planned trip.
               </p>
             </div>

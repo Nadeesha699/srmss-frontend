@@ -419,9 +419,10 @@ export default function OperationalStaffMaintenancePage() {
         <div className="flex items-center justify-between gap-3 px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
             <div>
-              <h1 className="text-xl font-bold text-slate-900">Maintenance</h1>
-              <p className="text-sm text-slate-500">
-                Report vehicle problems and track maintenance records.
+               <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+                  Maintenance</h1>
+              <p className="mt-1 max-w-2xl text-sm text-slate-500">
+                 Report vehicle problems and track maintenance records.
               </p>
             </div>
           </div>

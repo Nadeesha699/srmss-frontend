@@ -267,22 +267,21 @@ export default function SupervisorSchedulePage() {
             <span className="hidden sm:inline">Refresh</span>
           </button>
         </header>
-        <div className="flex h-16 items-center justify-between px-4 sm:px-6">
-          <div className="flex items-center gap-3">
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">
-                Schedule Management
-              </h1>
-
-              <p className="hidden text-xs text-gray-500 sm:block">
-                View and monitor depot service schedules
-              </p>
-            </div>
-          </div>
-        </div>
 
         <main className="p-4 sm:p-6">
-          {/* ERROR */}
+         <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
+                       <div>
+         
+                         <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+                           Schedule Management
+                         </h1>
+         
+                         <p className="mt-1 max-w-2xl text-sm text-slate-500">
+                            View and monitor depot service schedules
+                         </p>
+                       </div>
+         
+                     </div>
 
           {error && (
             <div className="mb-5 flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
@@ -302,7 +301,7 @@ export default function SupervisorSchedulePage() {
 
           {/* STATISTICS */}
 
-          <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-6">
+          <div className="mt-6 mb-6 grid grid-cols-2 gap-4 lg:grid-cols-6">
             <StatCard title="Total" value={stats.total} icon={<FiCalendar />} />
 
             <StatCard

@@ -468,19 +468,12 @@ export default function AssignedTripsPage() {
         <div className="p-4 md:p-6 lg:p-8">
           <div className="mx-auto max-w-7xl">
             <div className="mb-8">
-              <p className="text-sm font-semibold text-red-600">Trip Operations</p>
-              <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">
-                Assigned Trips
+              <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+                  Assigned Trips
               </h1>
-              <p className="mt-2 text-slate-500">
-                View and manage the trips assigned to you.
+              <p className="mt-1 max-w-2xl text-sm text-slate-500">
+                  View and manage the trips assigned to you.
               </p>
-
-              {user && (
-                <p className="mt-2 text-sm text-slate-500">
-                  Signed in as {user.name || user.email || `Staff #${getStaffId(user)}`}
-                </p>
-              )}
             </div>
 
             {error && (

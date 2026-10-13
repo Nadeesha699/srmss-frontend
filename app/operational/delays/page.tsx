@@ -409,10 +409,10 @@ export default function OperationalStaffReportDelaysPage() {
        
 
               <div>
-                <h1 className="text-xl font-bold text-slate-900">
+                <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
                   Report Delays
                 </h1>
-                <p className="mt-1 text-sm text-slate-500">
+                <p className="mt-1 max-w-2xl text-sm text-slate-500">
                   Report delays and operational problems on assigned trips.
                 </p>
               </div>

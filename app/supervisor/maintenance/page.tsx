@@ -360,18 +360,13 @@ export default function SupervisorMaintenancePage() {
         </header>
         <div className="p-4 sm:p-6 lg:p-8">
           <div className="mb-6">
-            <h2 className="text-2xl font-bold">
-              Maintenance Reports
-            </h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Review vehicle maintenance issues reported by your depot staff
+            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+                  Maintenance Reports
+            </h1>
+            <p className="mt-1 max-w-2xl text-sm text-slate-500">
+                  Review vehicle maintenance issues reported by your depot staff
               and update their progress.
             </p>
-            {depotId !== null && (
-              <p className="mt-2 text-xs text-slate-400">
-                Depot ID: {depotId}
-              </p>
-            )}
           </div>
 
           {error && (
