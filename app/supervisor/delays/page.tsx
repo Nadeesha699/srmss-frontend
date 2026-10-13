@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import {
   FiAlertCircle,
-  FiCheckCircle,
   FiClock,
   FiEdit2,
   FiMapPin,
@@ -385,7 +384,7 @@ export default function SupervisorDelaysPage() {
       />
 
       <main className="min-h-screen lg:pl-72">
-         <header className="sticky top-0 z-30 flex h-16 items-center border-b border-slate-200 bg-white/95 px-4 backdrop-blur md:px-6">
+          <header className="sticky top-0 z-30 flex h-16 items-center border-b border-slate-200 bg-white/95 px-4 backdrop-blur md:px-6">
           <button
             type="button"
             onClick={() => setMobileOpen(true)}
@@ -403,6 +402,15 @@ export default function SupervisorDelaysPage() {
               SRMSS Management Portal
             </p>
           </div>
+           <button
+            type="button"
+             onClick={() => loadData(true)}
+                disabled={refreshing || depotId === null}
+            className="ml-auto inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-red-200 hover:text-red-600 disabled:opacity-50"
+          >
+            <FiRefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
         </header>
 
         <div className="p-4 sm:p-6 lg:p-8">
@@ -417,14 +425,6 @@ export default function SupervisorDelaysPage() {
             </div>
 
             <div className="flex gap-2">
-              <button
-                onClick={() => loadData(true)}
-                disabled={refreshing || depotId === null}
-                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
-              >
-                <FiRefreshCw className={refreshing ? "animate-spin" : ""} />
-                Refresh
-              </button>
 
               <button
                 onClick={openAddModal}
@@ -494,7 +494,7 @@ export default function SupervisorDelaysPage() {
             ))}
           </div>
 
-          <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="mt-6 text-gray-600 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="relative">
               <FiSearch
                 className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
@@ -601,11 +601,11 @@ export default function SupervisorDelaysPage() {
       </main>
 
       {showModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+        <div className="fixed text-gray-500 inset-0 z-[60] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
           <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
               <div>
-                <h2 className="text-lg font-bold text-slate-900">
+                <h2 className="text-xl font-bold text-slate-900">
                   {editingDelay ? "Edit Delay" : "Record Trip Delay"}
                 </h2>
                 <p className="mt-1 text-sm text-slate-500">

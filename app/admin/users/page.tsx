@@ -653,7 +653,7 @@ export default function UsersPage() {
                       e.target.value,
                     )
                   }
-                  className="rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-red-500 focus:ring-4 focus:ring-red-50"
+                  className="rounded-xl border text-gray-500 border-slate-200 px-4 py-3 text-sm outline-none focus:border-red-500 focus:ring-4 focus:ring-red-50"
                 >
                   <option value="ALL">
                     All Roles
@@ -675,7 +675,7 @@ export default function UsersPage() {
                       e.target.value,
                     )
                   }
-                  className="rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-red-500 focus:ring-4 focus:ring-red-50"
+                  className="rounded-xl border text-gray-500 border-slate-200 px-4 py-3 text-sm outline-none focus:border-red-500 focus:ring-4 focus:ring-red-50"
                 >
                   <option value="ALL">
                     All Status
@@ -812,7 +812,7 @@ export default function UsersPage() {
       ===================================================== */}
 
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4">
+        <div className="fixed text-gray-500 inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4">
           <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
             {/* MODAL HEADER */}
 

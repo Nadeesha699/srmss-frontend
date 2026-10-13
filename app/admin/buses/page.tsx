@@ -995,18 +995,18 @@ const filteredBuses = buses.filter((bus) => {
       ------------------------------------------------------- */}
 
       {showForm && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/60 p-4 text-gray-900">
+        <div className="fixed text-gray-500 inset-0 z-[60] flex items-center justify-center bg-slate-950/60 p-4 text-gray-900">
           <div className="max-h-[95vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white shadow-2xl">
             {/* Header */}
             <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-6 py-5">
               <div>
-                <h2 className="text-lg font-bold text-slate-900">
+                <h2 className="text-xl font-bold text-slate-900">
                   {editingBus
                     ? "Edit Bus"
                     : "Add New Bus"}
                 </h2>
 
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-sm text-slate-500">
                   {editingBus
                     ? "Update bus information and depot assignment."
                     : "Enter the details for the new bus."}

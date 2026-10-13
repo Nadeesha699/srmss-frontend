@@ -700,7 +700,7 @@ export default function AssignmentsPage() {
                     </div>
                   )}
 
-                  <div className="mt-6 flex gap-3 rounded-xl border border-amber-100 bg-amber-50 p-4">
+                  {/* <div className="mt-6 flex gap-3 rounded-xl border border-amber-100 bg-amber-50 p-4">
                     <FiAlertTriangle className="mt-0.5 shrink-0 text-amber-600" />
                     <div>
                       <p className="text-sm font-semibold text-amber-800">
@@ -713,7 +713,7 @@ export default function AssignmentsPage() {
                         assignment.
                       </p>
                     </div>
-                  </div>
+                  </div> */}
 
                   <button
                     type="button"

@@ -491,11 +491,7 @@ export default function SupervisorFuelRecordsPage() {
             )}
           </section>
 
-          <div className="mt-5 rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm leading-6 text-blue-800">
-            <strong>View-only access:</strong> Supervisors can review fuel
-            records and costs here. Adding or editing fuel records remains an
-            Operational Staff function.
-          </div>
+        
         </div>
       </main>
     </div>

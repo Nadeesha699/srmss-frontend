@@ -1216,10 +1216,6 @@ export default function ReportsPage() {
                 />
               </div>
             </section>
-
-            <footer className="pb-4 text-center text-xs text-slate-400">
-              SRMSS Management Portal · Reports & Analytics
-            </footer>
           </div>
         </div>
       </main>

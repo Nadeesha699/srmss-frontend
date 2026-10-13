@@ -534,7 +534,7 @@ export default function DriversPage() {
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-red-500 focus:ring-4 focus:ring-red-50"
+                  className="rounded-xl text-gray-500 border border-slate-200 px-4 py-3 text-sm outline-none focus:border-red-500 focus:ring-4 focus:ring-red-50"
                   aria-label="Filter by driver status"
                 >
                   <option value="ALL">All Statuses</option>
@@ -620,7 +620,7 @@ export default function DriversPage() {
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4">
+        <div className="fixed text-gray-500 inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4">
           <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
               <div>

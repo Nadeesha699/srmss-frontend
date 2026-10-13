@@ -337,7 +337,7 @@ export default function SupervisorSchedulePage() {
 
           {/* FILTERS */}
 
-          <div className="mb-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+          <div className="mb-6 text-gray-600 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
             <div className="grid gap-3 md:grid-cols-4">
               <div className="relative md:col-span-2">
                 <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -631,7 +631,7 @@ export default function SupervisorSchedulePage() {
 
               {/* NOTE */}
 
-              <div className="rounded-xl border border-blue-100 bg-blue-50 p-4">
+              {/* <div className="rounded-xl border border-blue-100 bg-blue-50 p-4">
                 <div className="flex gap-3">
                   <FiAlertCircle
                     className="mt-0.5 shrink-0 text-blue-600"
@@ -650,7 +650,7 @@ export default function SupervisorSchedulePage() {
                     </p>
                   </div>
                 </div>
-              </div>
+              </div> */}
 
               {/* CLOSE */}
 

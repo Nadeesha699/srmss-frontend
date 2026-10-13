@@ -445,9 +445,6 @@ export default function SupervisorBusesPage() {
               )}
             </section>
 
-            <p className="text-xs text-slate-400">
-              View-only access: bus details and status are managed by the Administrator.
-            </p>
           </div>
         </div>
       </main>

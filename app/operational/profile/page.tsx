@@ -583,15 +583,6 @@ export default function OperationalStaffProfilePage() {
                   />
 
                   <ProfileField
-                    label="Phone Number"
-                    name="phone"
-                    value={form.phone}
-                    editing={editing}
-                    onChange={handleChange}
-                    icon={<FiPhone />}
-                  />
-
-                  <ProfileField
                     label="Role"
                     name="role"
                     value="Operational Staff"

@@ -942,9 +942,6 @@ export default function DepotsPage() {
                     ))}
                   </select>
 
-                  <p className="mt-1.5 text-xs text-slate-400">
-                    The selected supervisor is linked through users.id.
-                  </p>
                 </div>
 
                 {/* STATUS */}
@@ -1008,7 +1005,7 @@ export default function DepotsPage() {
 
               {/* WORKFLOW INFO */}
 
-              <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
+              {/* <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
                 <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
                   SRMSS Workflow
                 </p>
@@ -1036,7 +1033,7 @@ export default function DepotsPage() {
 
                   <span className="rounded-lg bg-white px-3 py-2">Trips</span>
                 </div>
-              </div>
+              </div> */}
 
               {/* BUTTONS */}
 

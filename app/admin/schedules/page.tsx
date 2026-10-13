@@ -812,7 +812,7 @@ export default function AdminSchedulesPage() {
             </div>
           </section>
 
-          <section className="rounded-2xl border border-blue-200 bg-blue-50 p-5">
+          {/* <section className="rounded-2xl border border-blue-200 bg-blue-50 p-5">
             <div className="flex items-start gap-3">
               <div className="rounded-xl bg-white p-3 text-blue-700 shadow-sm">
                 <FiUser size={20} />
@@ -829,7 +829,7 @@ export default function AdminSchedulesPage() {
                 </p>
               </div>
             </div>
-          </section>
+          </section> */}
         </div>
       </main>
 
@@ -1001,11 +1001,11 @@ export default function AdminSchedulesPage() {
                 </FormField> */}
               </div>
 
-              <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm leading-6 text-blue-900">
+              {/* <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm leading-6 text-blue-900">
                 The Depot Supervisor assigns the bus, driver and Operational
                 Staff after the schedule is created. Creating a schedule does
                 not automatically assign these resources.
-              </div>
+              </div> */}
 
               <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:justify-end">
                 <button

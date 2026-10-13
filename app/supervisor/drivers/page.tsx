@@ -426,10 +426,6 @@ export default function SupervisorDriversPage() {
               </div>
             )}
 
-            <p className="mt-6 text-xs text-slate-400">
-              Driver records are view-only for Supervisors. Contact the
-              Administrator to change driver details or records.
-            </p>
           </div>
         </main>
       </div>

@@ -434,7 +434,7 @@ export default function SupervisorOperationalStaffPage() {
             })}
           </div>
 
-          <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="mt-6 text-gray-600 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex flex-col gap-3 lg:flex-row">
               <div className="relative flex-1">
                 <FiSearch
@@ -534,10 +534,6 @@ export default function SupervisorOperationalStaffPage() {
                             <p className="flex items-center gap-2 text-sm text-slate-600">
                               <FiMail className="shrink-0 text-slate-400" />
                               {member.email || "-"}
-                            </p>
-                            <p className="mt-1 flex items-center gap-2 text-sm text-slate-600">
-                              <FiPhone className="shrink-0 text-slate-400" />
-                              {member.phone || "-"}
                             </p>
                           </td>
 
@@ -674,7 +670,7 @@ export default function SupervisorOperationalStaffPage() {
                 </div>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-1">
                 <div className="rounded-xl border border-slate-200 p-4">
                   <div className="flex items-center gap-2 text-slate-400">
                     <FiMail size={16} />
@@ -682,15 +678,6 @@ export default function SupervisorOperationalStaffPage() {
                   </div>
                   <p className="mt-2 break-all text-sm font-medium text-slate-700">
                     {selectedStaff.email || "Not available"}
-                  </p>
-                </div>
-                <div className="rounded-xl border border-slate-200 p-4">
-                  <div className="flex items-center gap-2 text-slate-400">
-                    <FiPhone size={16} />
-                    <span className="text-xs">Phone</span>
-                  </div>
-                  <p className="mt-2 text-sm font-medium text-slate-700">
-                    {selectedStaff.phone || "Not available"}
                   </p>
                 </div>
               </div>

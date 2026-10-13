@@ -254,7 +254,7 @@ export default function SupervisorTripsPage() {
       />
 
       <main className="min-h-screen lg:pl-72">
-        {/* Header */}
+   
           <header className="sticky top-0 z-30 flex h-16 items-center border-b border-slate-200 bg-white/95 px-4 backdrop-blur md:px-6">
           <button
             type="button"
@@ -366,7 +366,7 @@ export default function SupervisorTripsPage() {
           </div>
 
           {/* Filters */}
-          <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="mt-6 text-gray-600 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex flex-col gap-3 lg:flex-row">
               <div className="relative flex-1">
                 <FiSearch
