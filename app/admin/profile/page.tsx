@@ -103,7 +103,7 @@ export default function AdminProfilePage() {
         email: data.email || "",
       });
     } catch (err: any) {
-      console.error("Failed to load profile:", err);
+      console.log("Failed to load profile:", err);
 
       setError(err.response?.data?.message || "Unable to load your profile.");
     } finally {
@@ -182,7 +182,7 @@ export default function AdminProfilePage() {
         setSuccess("");
       }, 3000);
     } catch (err: any) {
-      console.error("Failed to update profile:", err);
+      console.log("Failed to update profile:", err);
 
       setError(err.response?.data?.message || "Unable to update your profile.");
     } finally {
@@ -267,7 +267,7 @@ export default function AdminProfilePage() {
         setSuccess("");
       }, 3000);
     } catch (err: any) {
-      console.error("Password change failed:", err);
+      console.log("Password change failed:", err);
 
       setError(err.response?.data?.message || "Unable to change password.");
     } finally {

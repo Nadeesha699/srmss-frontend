@@ -116,7 +116,7 @@ export default function BusesPage() {
 
       setBuses(data);
     } catch (error: any) {
-      console.error("Failed to fetch buses:", error);
+      console.log("Failed to fetch buses:", error);
 
       setError(
         error?.response?.data?.message ||
@@ -145,7 +145,7 @@ export default function BusesPage() {
 
       setDepots(data);
     } catch (error: any) {
-      console.error("Failed to fetch depots:", error);
+      console.log("Failed to fetch depots:", error);
 
       setError(
         error?.response?.data?.message ||
@@ -380,7 +380,7 @@ const filteredBuses = buses.filter((bus) => {
 
       closeModal();
     } catch (error: any) {
-      console.error("Bus save error:", error);
+      console.log("Bus save error:", error);
 
       const message =
         error?.response?.data?.message ||
@@ -433,7 +433,7 @@ const filteredBuses = buses.filter((bus) => {
 
   toast.success("Bus deleted successfully.");
     } catch (error: any) {
-      console.error(
+      console.log(
         "Delete bus error:",
         error,
       );
@@ -499,7 +499,7 @@ const filteredBuses = buses.filter((bus) => {
         ),
       );
     } catch (error: any) {
-      console.error(
+      console.log(
         "Failed to update bus status:",
         error,
       );

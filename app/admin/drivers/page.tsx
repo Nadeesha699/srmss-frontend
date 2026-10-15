@@ -164,7 +164,7 @@ export default function DriversPage() {
 
       setDrivers(data);
     } catch (err) {
-      console.error("Fetch drivers error:", err);
+      console.log("Fetch drivers error:", err);
       setError(getErrorMessage(err, "Failed to load drivers."));
     } finally {
       setLoading(false);
@@ -187,7 +187,7 @@ export default function DriversPage() {
 
       setDepots(data);
     } catch (err) {
-      console.error("Fetch depots error:", err);
+      console.log("Fetch depots error:", err);
       setError(getErrorMessage(err, "Failed to load depots."));
     } finally {
       setLoadingDepots(false);
@@ -355,7 +355,7 @@ export default function DriversPage() {
       setEditingDriver(null);
       setForm({ ...emptyForm });
     } catch (err) {
-      console.error("Save driver error:", err);
+      console.log("Save driver error:", err);
       toast.error(getErrorMessage(err, "Failed to save driver."));
     } finally {
       setSaving(false);
@@ -390,7 +390,7 @@ export default function DriversPage() {
 
       toast.success("Driver deleted successfully.");
     } catch (err) {
-      console.error("Delete driver error:", err);
+      console.log("Delete driver error:", err);
       toast.error(
         getErrorMessage(
           err,
@@ -423,7 +423,7 @@ export default function DriversPage() {
         ),
       );
     } catch (err) {
-      console.error("Update driver status error:", err);
+      console.log("Update driver status error:", err);
       toast.error(getErrorMessage(err, "Failed to update driver status."));
     } finally {
       setStatusUpdatingId(null);

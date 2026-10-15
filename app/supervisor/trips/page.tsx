@@ -193,7 +193,7 @@ export default function SupervisorTripsPage() {
 
     setTrips(depotTrips);
   } catch (err) {
-    console.error("Failed to load trips:", err);
+    console.log("Failed to load trips:", err);
 
     setTrips([]);
     setError("Unable to load trips. Please check the trips API.");

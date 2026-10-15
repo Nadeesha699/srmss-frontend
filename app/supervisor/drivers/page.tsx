@@ -176,7 +176,7 @@ export default function SupervisorDriversPage() {
 
       setDrivers(depotDrivers);
     } catch (err) {
-      console.error("Fetch depot drivers error:", err);
+      console.log("Fetch depot drivers error:", err);
       setError(getErrorMessage(err, "Failed to load depot drivers."));
       setDrivers([]);
     } finally {

@@ -296,7 +296,7 @@ export default function SupervisorDashboard() {
         delays: depotDelays,
       });
     } catch (err: unknown) {
-      console.error("Supervisor dashboard error:", err);
+      console.log("Supervisor dashboard error:", err);
 
       if (axios.isAxiosError(err)) {
         setError(

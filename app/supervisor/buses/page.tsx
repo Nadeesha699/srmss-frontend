@@ -146,7 +146,7 @@ export default function SupervisorBusesPage() {
         depotBuses.find((bus: Bus) => bus.depot_name)?.depot_name || ""
       );
     } catch (err: any) {
-      console.error("Failed to load buses:", err);
+      console.log("Failed to load buses:", err);
 
       setError(
         err?.response?.data?.message ||

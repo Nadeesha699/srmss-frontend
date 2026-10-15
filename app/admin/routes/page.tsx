@@ -130,7 +130,7 @@ export default function RoutesPage() {
           : []
       );
     } catch (err: any) {
-      console.error(
+      console.log(
         "Failed to load routes:",
         err
       );
@@ -408,7 +408,7 @@ export default function RoutesPage() {
       setEditingRoute(null);
       setForm(emptyForm);
     } catch (err: any) {
-      console.error(
+      console.log(
         "Failed to save route:",
         err
       );
@@ -462,7 +462,7 @@ if (!result.isConfirmed) return;
         )
       );
     } catch (err: any) {
-      console.error(
+      console.log(
         "Failed to delete route:",
         err
       );
@@ -504,7 +504,7 @@ if (!result.isConfirmed) return;
         )
       );
     } catch (err: any) {
-      console.error(
+      console.log(
         "Failed to update route status:",
         err
       );

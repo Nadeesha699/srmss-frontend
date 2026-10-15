@@ -125,7 +125,7 @@ fetchDepot(Number(user.depot_id));
         email: user.email || "",
       });
     } catch (err: any) {
-      console.error("Failed to load profile:", err);
+      console.log("Failed to load profile:", err);
 
       setError(err?.response?.data?.message || "Failed to load your profile.");
     } finally {
@@ -159,7 +159,7 @@ fetchDepot(Number(user.depot_id));
           location: depotData.location,
         });
       } catch (err) {
-        console.error("Depot loading error:", err);
+        console.log("Depot loading error:", err);
         setDepot(null);
       } finally {
         setDepotLoading(false);
@@ -242,7 +242,7 @@ fetchDepot(Number(user.depot_id));
         setSuccess("");
       }, 3000);
     } catch (err: any) {
-      console.error("Failed to update profile:", err);
+      console.log("Failed to update profile:", err);
 
       setError(
         err?.response?.data?.message || "Failed to update your profile.",
@@ -311,7 +311,7 @@ fetchDepot(Number(user.depot_id));
         setPasswordSuccess("");
       }, 1200);
     } catch (err: any) {
-      console.error("Failed to change password:", err);
+      console.log("Failed to change password:", err);
 
       setPasswordError(
         err?.response?.data?.message || "Failed to change password.",

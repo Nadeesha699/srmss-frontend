@@ -104,7 +104,7 @@ export default function SupervisorSchedulePage() {
 
       setSchedules(ownDepotSchedules);
     } catch (err) {
-      console.error("Load schedules error:", err);
+      console.log("Load schedules error:", err);
       setError("Failed to load schedules.");
       setSchedules([]);
     } finally {

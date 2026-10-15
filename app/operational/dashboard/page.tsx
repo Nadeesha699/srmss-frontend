@@ -360,7 +360,7 @@ export default function OperationalDashboard() {
         setDepotName("");
       }
     } catch (err: any) {
-      console.error("Operational dashboard error:", err);
+      console.log("Operational dashboard error:", err);
       setError(
         err?.response?.data?.message ||
           "Unable to load operational dashboard data.",

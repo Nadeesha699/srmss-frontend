@@ -122,7 +122,7 @@ export default function DepotsPage() {
 
       setDepots(depotData);
     } catch (err: any) {
-      console.error("Fetch depots error:", err);
+      console.log("Fetch depots error:", err);
 
       setError(
         err?.response?.data?.message ||
@@ -163,7 +163,7 @@ export default function DepotsPage() {
 
       setSupervisors(supervisorUsers);
     } catch (err: any) {
-      console.error("Fetch supervisors error:", err);
+      console.log("Fetch supervisors error:", err);
 
       toast.error(
         err?.response?.data?.message ||
@@ -354,7 +354,7 @@ export default function DepotsPage() {
       setShowModal(false);
       setEditingDepot(null);
     } catch (err: any) {
-      console.error("Save depot error:", err);
+      console.log("Save depot error:", err);
 
       const message =
         err?.response?.data?.message ||
@@ -391,7 +391,7 @@ export default function DepotsPage() {
         ),
       );
     } catch (err: any) {
-      console.error("Status update error:", err);
+      console.log("Status update error:", err);
 
       toast.error(err?.response?.data?.message || "Failed to update depot status.");
     } finally {
@@ -440,7 +440,7 @@ export default function DepotsPage() {
 
       toast.success("Depot deleted successfully.");
     } catch (err: any) {
-      console.error("Delete depot error:", err);
+      console.log("Delete depot error:", err);
 
       toast.error(err?.response?.data?.message || "Failed to delete depot.");
     } finally {

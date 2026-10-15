@@ -196,7 +196,7 @@ export default function ReportsPage() {
           setters[index](normaliseList<any>(result.value));
         } else {
           failed++;
-          console.error(`Failed to load ${names[index]}:`, result.reason);
+          console.log(`Failed to load ${names[index]}:`, result.reason);
         }
       });
 
@@ -210,7 +210,7 @@ export default function ReportsPage() {
         );
       }
     } catch (err) {
-      console.error(err);
+      console.log(err);
       setError("Failed to load report data.");
     } finally {
       setLoading(false);
@@ -776,7 +776,7 @@ export default function ReportsPage() {
 
       toast.success("Report generated successfully.");
     } catch (err) {
-      console.error("PDF generation error:", err);
+      console.log("PDF generation error:", err);
       toast.error("Unable to generate the PDF. Please try again.");
     } finally {
       setReporting(false);

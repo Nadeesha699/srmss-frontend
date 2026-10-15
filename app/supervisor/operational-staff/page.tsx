@@ -257,7 +257,7 @@ export default function SupervisorOperationalStaffPage() {
           );
         });
       } catch (err: any) {
-        console.error("Failed to load operational staff:", err);
+        console.log("Failed to load operational staff:", err);
 
         setError(
           err?.response?.data?.message ||

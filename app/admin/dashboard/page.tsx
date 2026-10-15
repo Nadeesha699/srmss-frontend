@@ -148,7 +148,7 @@ export default function DashboardPage() {
         endpoints[index].set(getArray(result.value));
       } else {
         failures++;
-        console.error(`Failed to load ${endpoints[index].url}`, result.reason);
+        console.log(`Failed to load ${endpoints[index].url}`, result.reason);
       }
     });
 

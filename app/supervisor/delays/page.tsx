@@ -198,7 +198,7 @@ export default function SupervisorDelaysPage() {
 
         setTrips(allTrips.filter((trip) => Number(trip.depot_id) === depotId));
       } catch (err: any) {
-        console.error("Failed to load delay data:", err);
+        console.log("Failed to load delay data:", err);
         setError(
           err?.response?.data?.message ||
             "Unable to load delay information. Check your API and login.",

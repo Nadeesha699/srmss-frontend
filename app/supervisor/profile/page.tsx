@@ -133,7 +133,7 @@ export default function SupervisorProfilePage() {
           location: depotData.location,
         });
       } catch (err) {
-        console.error("Depot loading error:", err);
+        console.log("Depot loading error:", err);
         setDepot(null);
       } finally {
         setDepotLoading(false);
@@ -171,7 +171,7 @@ export default function SupervisorProfilePage() {
         email: data.email || "",
       });
     } catch (err: any) {
-      console.error("Profile loading error:", err);
+      console.log("Profile loading error:", err);
 
       setError(
         err?.response?.data?.message ||
@@ -258,7 +258,7 @@ export default function SupervisorProfilePage() {
 
       setEditing(false);
     } catch (err: any) {
-      console.error("Profile update error:", err);
+      console.log("Profile update error:", err);
 
       setError(
         err?.response?.data?.message || "Unable to update your profile.",
@@ -334,7 +334,7 @@ export default function SupervisorProfilePage() {
         confirmPassword: "",
       });
     } catch (err: any) {
-      console.error("Password update error:", err);
+      console.log("Password update error:", err);
 
       setPasswordError(
         err?.response?.data?.message || "Unable to change your password.",

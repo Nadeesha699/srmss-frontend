@@ -148,7 +148,7 @@ export default function UsersPage() {
 
       setUsers(filteredData);
     } catch (err: any) {
-      console.error("Fetch users error:", err);
+      console.log("Fetch users error:", err);
 
       setError(
         err?.response?.data?.message ||
@@ -183,7 +183,7 @@ export default function UsersPage() {
 
       setDepots(data);
     } catch (err: any) {
-      console.error("Fetch depots error:", err);
+      console.log("Fetch depots error:", err);
 
       toast.error(
         err?.response?.data?.message ||
@@ -444,7 +444,7 @@ export default function UsersPage() {
       setShowModal(false);
       setEditingUser(null);
     } catch (err: any) {
-      console.error(
+      console.log(
         "Save user error:",
         err,
       );
@@ -497,7 +497,7 @@ export default function UsersPage() {
         "User deleted successfully.",
       );
     } catch (err: any) {
-      console.error(
+      console.log(
         "Delete user error:",
         err,
       );

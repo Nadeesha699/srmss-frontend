@@ -125,7 +125,7 @@ export default function LandingPage() {
       if (busesResult.status === "fulfilled") {
         console.log("✅ BUSES:", busesResult.value.data);
       } else {
-        console.error(
+        console.log(
           "❌ BUSES ERROR:",
           busesResult.reason?.response?.data || busesResult.reason,
         );
@@ -134,7 +134,7 @@ export default function LandingPage() {
       if (routesResult.status === "fulfilled") {
         console.log("✅ ROUTES:", routesResult.value.data);
       } else {
-        console.error(
+        console.log(
           "❌ ROUTES ERROR:",
           routesResult.reason?.response?.data || routesResult.reason,
         );
@@ -143,7 +143,7 @@ export default function LandingPage() {
       if (usersResult.status === "fulfilled") {
         console.log("✅ USERS:", usersResult.value.data);
       } else {
-        console.error(
+        console.log(
           "❌ USERS ERROR:",
           usersResult.reason?.response?.data || usersResult.reason,
         );
@@ -152,7 +152,7 @@ export default function LandingPage() {
       if (tripsResult.status === "fulfilled") {
         console.log("✅ TRIPS:", tripsResult.value.data);
       } else {
-        console.error(
+        console.log(
           "❌ TRIPS ERROR:",
           tripsResult.reason?.response?.data || tripsResult.reason,
         );
@@ -254,7 +254,7 @@ export default function LandingPage() {
         performance,
       });
     } catch (error) {
-      console.error("Failed to load SRMSS dashboard data:", error);
+      console.log("Failed to load SRMSS dashboard data:", error);
 
       setApiError(true);
     } finally {

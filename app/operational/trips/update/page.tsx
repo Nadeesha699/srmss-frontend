@@ -261,7 +261,7 @@ export default function TripUpdatesPage() {
       setTrips(staffTrips);
       setDelays(staffDelays);
     } catch (err: any) {
-      console.error("Failed to load trip data:", err);
+      console.log("Failed to load trip data:", err);
       setError(
         getErrorMessage(err, "Failed to load trip update information.")
       );
@@ -350,7 +350,7 @@ export default function TripUpdatesPage() {
 
       await loadData(user.id);
     } catch (err: any) {
-      console.error("Trip update failed:", err);
+      console.log("Trip update failed:", err);
       setError(getErrorMessage(err, "Unable to update trip status."));
     } finally {
       setUpdatingTripId(null);
@@ -426,7 +426,7 @@ export default function TripUpdatesPage() {
 
         setNotice(`Delay recorded for ${getTripNumber(selectedTrip)}.`);
       } catch (statusError: any) {
-        console.error("Delay saved, but trip status update failed:", statusError);
+        console.log("Delay saved, but trip status update failed:", statusError);
 
         setNotice(
           "The delay report was saved, but the trip status could not be updated. Refresh and check the trip status."
@@ -437,7 +437,7 @@ export default function TripUpdatesPage() {
       setSelectedTrip(null);
       await loadData(user.id);
     } catch (err: any) {
-      console.error("Delay report failed:", err);
+      console.log("Delay report failed:", err);
       setError(getErrorMessage(err, "Unable to record the delay."));
     } finally {
       setSavingDelay(false);

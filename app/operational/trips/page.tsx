@@ -286,7 +286,7 @@ export default function AssignedTripsPage() {
 
       setTrips(staffTrips);
     } catch (err: any) {
-      console.error("Failed to load trips:", err);
+      console.log("Failed to load trips:", err);
 
       setError(
         err?.response?.data?.message ||
@@ -415,7 +415,7 @@ export default function AssignedTripsPage() {
           : current
       );
     } catch (err: any) {
-      console.error("Trip status update failed:", err);
+      console.log("Trip status update failed:", err);
 
       setError(
         err?.response?.data?.message ||

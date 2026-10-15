@@ -219,7 +219,7 @@ export default function AssignmentsPage() {
       setDrivers(ownDepotDrivers);
       setAssignments(ownDepotAssignments);
     } catch (error: unknown) {
-      console.error("Failed to load assignment data:", error);
+      console.log("Failed to load assignment data:", error);
 
       if (axios.isAxiosError(error)) {
         setMessage(
@@ -445,10 +445,10 @@ export default function AssignmentsPage() {
       await loadData();
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
-        console.error("Assignment status:", error.response?.status);
-        console.error("Assignment response:", error.response?.data);
+        console.log("Assignment status:", error.response?.status);
+        console.log("Assignment response:", error.response?.data);
       } else {
-        console.error("Unexpected assignment error:", error);
+        console.log("Unexpected assignment error:", error);
       }
 
       setMessageType("error");
