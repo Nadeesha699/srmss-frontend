@@ -33,8 +33,6 @@ const DEPOT_API = `${API_BASE}/depots`;
 
 type Trip = {
   id: number;
-  trip_no?: string;
-  tripNo?: string;
   schedule_id?: number;
   assignment_id?: number;
   schedule_code?: string;
@@ -76,8 +74,6 @@ type Assignment = {
 type Delay = {
   id: number;
   trip_id?: number;
-  trip_no?: string;
-  tripNo?: string;
   route?: string;
   route_name?: string;
   bus?: string;
@@ -165,7 +161,7 @@ function normalizeDate(value?: string) {
 
 function getTripDate(trip: Trip) {
   return normalizeDate(
-    trip.actual_start_time || trip.departure_time || trip.created_at,
+    trip.created_at,
   );
 }
 
@@ -207,12 +203,12 @@ function formatTime(value?: string) {
 function getTripStatus(trip: Trip): string {
   const status = String(trip.status || "").toUpperCase();
 
-  if (["IN_PROGRESS", "RUNNING", "ONGOING", "STARTED"].includes(status)) {
+  if (["IN_PROGRESS"].includes(status)) {
     return "IN_PROGRESS";
   }
 
   if (["DELAYED", "DELAY"].includes(status)) return "DELAYED";
-  if (["COMPLETED", "COMPLETE", "FINISHED"].includes(status)) {
+  if (["COMPLETED"].includes(status)) {
     return "COMPLETED";
   }
   if (status === "CANCELLED") return "CANCELLED";
@@ -230,7 +226,6 @@ export default function OperationalDashboard() {
 
   const [depotId, setDepotId] = useState<number | null>(null);
   const [depotName, setDepotName] = useState("");
-  const [depotLocation, setDepotLocation] = useState("");
 
   const [trips, setTrips] = useState<Trip[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -306,10 +301,14 @@ export default function OperationalDashboard() {
         maintenanceResponse.data,
       );
 
+      
+
       // Keep trips and assignments for the logged-in staff member.
       const staffTrips = allTrips.filter(
         (trip) => Number(trip.staff_id) === Number(loggedUser.id),
       );
+
+      console.log(staffTrips)
 
       const staffAssignments = allAssignments.filter(
         (assignment) => Number(assignment.staff_id) === Number(loggedUser.id),
@@ -352,7 +351,6 @@ export default function OperationalDashboard() {
             const depot: Depot = payload?.depot ?? payload;
 
             if (depot?.name) setDepotName(depot.name);
-            if (depot?.location) setDepotLocation(depot.location);
           } catch {
             // The ID remains visible even if the name lookup fails.
             setDepotName("");
@@ -360,7 +358,6 @@ export default function OperationalDashboard() {
         }
       } else {
         setDepotName("");
-        setDepotLocation("");
       }
     } catch (err: any) {
       console.error("Operational dashboard error:", err);
@@ -466,7 +463,6 @@ export default function OperationalDashboard() {
     )
     .slice(0, 3);
 
-  const firstName = user?.name?.split(" ")[0] || "Operational Staff";
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -615,9 +611,9 @@ export default function OperationalDashboard() {
                                 <h3 className="font-semibold text-slate-800">
                                   {getTripRoute(trip)}
                                 </h3>
-                                {(trip.trip_no || trip.tripNo) && (
+                                {(trip.id) && (
                                   <span className="rounded-md bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-500">
-                                    {trip.trip_no || trip.tripNo}
+                                    {trip.id}
                                   </span>
                                 )}
                               </div>
@@ -851,27 +847,7 @@ export default function OperationalDashboard() {
   );
 }
 
-function DepotInfo({
-  icon,
-  label,
-  value,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 p-3">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-red-600 shadow-sm">
-        {icon}
-      </div>
-      <div className="min-w-0">
-        <p className="text-xs text-slate-500">{label}</p>
-        <p className="truncate text-sm font-semibold text-slate-800">{value}</p>
-      </div>
-    </div>
-  );
-}
+
 
 function StatCard({
   title,

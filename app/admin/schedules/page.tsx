@@ -23,6 +23,7 @@ import {
 } from "react-icons/fi";
 
 import { AdminSidebar } from "@/components/SideNavBar/AdminSideNavBar";
+import Swal from "sweetalert2";
 
 const API = "http://localhost:5000/api";
 const SCHEDULE_API = `${API}/schedules`;
@@ -404,11 +405,19 @@ export default function AdminSchedulesPage() {
   };
 
   const handleDeleteSchedule = async (schedule: Schedule) => {
-    const confirmed = window.confirm(
-      `Delete ${schedule.schedule_code}? Only delete schedules that have no assignment or trip history.`,
-    );
-
-    if (!confirmed) return;
+    const result = await Swal.fire({
+      title: "Delete Route?",
+      text: `Delete ${schedule.schedule_code}? Only delete schedules that have no assignment or trip history.`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#dc2626",
+      cancelButtonColor: "#64748b",
+      confirmButtonText: "Yes, delete it",
+      cancelButtonText: "Cancel",
+      reverseButtons: true,
+    });
+    
+    if (!result.isConfirmed) return;
 
     setError("");
     setNotice("");

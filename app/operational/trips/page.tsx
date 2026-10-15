@@ -127,34 +127,33 @@ function normalizeDate(value?: string | null): string {
   return value ? value.substring(0, 10) : "";
 }
 
-function getTodayDate(): string {
-  const date = new Date();
+function getTodayDate() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
 
-  return [
-    date.getFullYear(),
-    String(date.getMonth() + 1).padStart(2, "0"),
-    String(date.getDate()).padStart(2, "0"),
-  ].join("-");
+  return `${year}-${month}-${day}`;
 }
 
 function getTripDate(trip: Trip): string {
-  // Prefer the scheduled service date.
-  if (trip.schedule_date) return normalizeDate(trip.schedule_date);
+  // // Prefer the scheduled service date.
+  // if (trip.schedule_date) return normalizeDate(trip.schedule_date);
 
-  // Only use departure_time as a date if it contains a date.
-  if (
-    trip.departure_time &&
-    /^\d{4}-\d{2}-\d{2}/.test(trip.departure_time)
-  ) {
-    return normalizeDate(trip.departure_time);
-  }
+  // // Only use departure_time as a date if it contains a date.
+  // if (
+  //   trip.departure_time &&
+  //   /^\d{4}-\d{2}-\d{2}/.test(trip.departure_time)
+  // ) {
+  //   return normalizeDate(trip.departure_time);
+  // }
 
-  if (
-    trip.actual_start_time &&
-    /^\d{4}-\d{2}-\d{2}/.test(trip.actual_start_time)
-  ) {
-    return normalizeDate(trip.actual_start_time);
-  }
+  // if (
+  //   trip.actual_start_time &&
+  //   /^\d{4}-\d{2}-\d{2}/.test(trip.actual_start_time)
+  // ) {
+  //   return normalizeDate(trip.actual_start_time);
+  // }
 
   return normalizeDate(trip.created_at);
 }
@@ -589,7 +588,7 @@ export default function AssignedTripsPage() {
                   />
                 </div>
 
-                <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="mt-6 text-gray-600 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                     <div className="relative w-full lg:max-w-md">
                       <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />

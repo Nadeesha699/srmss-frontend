@@ -20,6 +20,7 @@ import {
 
 import { AdminSidebar } from "@/components/SideNavBar/AdminSideNavBar";
 import { toast, ToastContainer } from "react-toastify";
+import Swal from "sweetalert2";
 
 const API_URL = "http://localhost:5000/api/buses";
 const DEPOT_API_URL = "http://localhost:5000/api/depots";
@@ -94,24 +95,7 @@ export default function BusesPage() {
      AUTH CONFIG
   --------------------------------------------------------- */
 
-  const getAuthConfig = () => {
-    const token =
-      typeof window !== "undefined"
-        ? localStorage.getItem("token") ||
-          localStorage.getItem("accessToken") ||
-          localStorage.getItem("srmss_token")
-        : null;
-
-    if (!token) {
-      return {};
-    }
-
-    return {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    };
-  };
+ 
 
   /* ---------------------------------------------------------
      GET BUSES
@@ -124,7 +108,6 @@ export default function BusesPage() {
 
       const response = await axios.get(
         API_URL,
-        getAuthConfig(),
       );
 
       const data = Array.isArray(response.data)
@@ -154,7 +137,6 @@ export default function BusesPage() {
 
       const response = await axios.get(
         DEPOT_API_URL,
-        getAuthConfig(),
       );
 
       const data = Array.isArray(response.data)
@@ -350,7 +332,6 @@ const filteredBuses = buses.filter((bus) => {
         const response = await axios.put(
           `${API_URL}/${editingBus.id}`,
           payload,
-          getAuthConfig(),
         );
 
         const updatedBus =
@@ -381,7 +362,6 @@ const filteredBuses = buses.filter((bus) => {
         const response = await axios.post(
           API_URL,
           payload,
-          getAuthConfig(),
         );
 
         const newBus = response.data?.data;
@@ -424,18 +404,25 @@ const filteredBuses = buses.filter((bus) => {
 
     if (!bus) return;
 
-    const confirmed = window.confirm(
-      `Are you sure you want to delete bus ${bus.registration_no}?`,
-    );
-
-    if (!confirmed) return;
+    const result = await Swal.fire({
+      title: "Delete Route?",
+      text: `Are you sure you want to delete bus ${bus.registration_no}?`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#dc2626",
+      cancelButtonColor: "#64748b",
+      confirmButtonText: "Yes, delete it",
+      cancelButtonText: "Cancel",
+      reverseButtons: true,
+    });
+    
+    if (!result.isConfirmed) return;
 
     try {
       setDeletingId(id);
 
       await axios.delete(
         `${API_URL}/${id}`,
-        getAuthConfig(),
       );
 
       setBuses((current) =>

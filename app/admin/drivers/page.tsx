@@ -23,6 +23,7 @@ import {
 
 import { AdminSidebar } from "@/components/SideNavBar/AdminSideNavBar";
 import { toast, ToastContainer } from "react-toastify";
+import Swal from "sweetalert2";
 
 const API_URL = "http://localhost:5000/api";
 
@@ -362,11 +363,19 @@ export default function DriversPage() {
   };
 
   const handleDelete = async (driver: Driver) => {
-    const confirmed = window.confirm(
-      `Are you sure you want to delete driver ${driver.name} (${driver.employee_no})?`,
-    );
-
-    if (!confirmed) return;
+    const result = await Swal.fire({
+      title: "Delete Route?",
+      text: `Are you sure you want to delete driver ${driver.name} (${driver.employee_no})?`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#dc2626",
+      cancelButtonColor: "#64748b",
+      confirmButtonText: "Yes, delete it",
+      cancelButtonText: "Cancel",
+      reverseButtons: true,
+    });
+    
+    if (!result.isConfirmed) return;
 
     try {
       setDeletingId(driver.id);

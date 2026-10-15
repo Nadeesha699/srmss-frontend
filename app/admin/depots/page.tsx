@@ -30,6 +30,7 @@ import {
   updateDepot,
 } from "@/services/depotServices";
 import { toast, ToastContainer } from "react-toastify";
+import Swal from "sweetalert2";
 
 const API_URL = "http://localhost:5000/api";
 
@@ -415,11 +416,20 @@ export default function DepotsPage() {
       return;
     }
 
-    const confirmed = window.confirm(
-      `Are you sure you want to delete ${depot.name}?`,
-    );
+    const result = await Swal.fire({
+      title: "Delete Route?",
+      text: `Are you sure you want to delete ${depot.name}?`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#dc2626",
+      cancelButtonColor: "#64748b",
+      confirmButtonText: "Yes, delete it",
+      cancelButtonText: "Cancel",
+      reverseButtons: true,
+    });
+    
+    if (!result.isConfirmed) return;
 
-    if (!confirmed) return;
 
     try {
       setDeletingId(depot.id);

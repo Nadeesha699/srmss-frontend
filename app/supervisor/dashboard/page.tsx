@@ -18,7 +18,6 @@ import {
   FiLoader,
   FiMapPin,
   FiMenu,
-  FiRefreshCw,
   FiTruck,
   FiUserCheck,
   FiUsers,
@@ -54,6 +53,7 @@ type Schedule = {
   departure_time?: string;
   arrival_time?: string;
   status?: string;
+  created_at?: string;
 };
 
 type Bus = {
@@ -97,8 +97,6 @@ type Assignment = {
 type Trip = {
   id: number;
   depot_id?: number;
-  trip_no?: string;
-  tripNo?: string;
   schedule_id?: number;
   assignment_id?: number;
   schedule_code?: string;
@@ -327,8 +325,8 @@ export default function SupervisorDashboard() {
     () =>
       data.schedules.filter(
         (schedule) =>
-          schedule.service_date &&
-          normalizeDate(schedule.service_date) === today,
+          schedule.created_at &&
+          normalizeDate(schedule.created_at) === today,
       ),
     [data.schedules, today],
   );
@@ -727,7 +725,7 @@ export default function SupervisorDashboard() {
                               </p>
                               <p className="mt-1 text-xs text-slate-400">
                                 Trip{" "}
-                                {trip.trip_no || trip.tripNo || `#${trip.id}`}
+                                {`#${trip.id}`}
                               </p>
                             </div>
 

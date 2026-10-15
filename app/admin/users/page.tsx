@@ -28,6 +28,7 @@ import {
 
 import { AdminSidebar } from "@/components/SideNavBar/AdminSideNavBar";
 import { toast, ToastContainer } from "react-toastify";
+import Swal from "sweetalert2";
 
 /* =========================================================
    API
@@ -386,7 +387,7 @@ export default function UsersPage() {
 
     if (
       form.role !== "ADMIN" &&
-      !form.depot_id
+      !form.depot_id && editingUser
     ) {
       toast.error(
         "Please select a depot for this user.",
@@ -465,12 +466,19 @@ export default function UsersPage() {
   const handleDelete = async (
     user: User,
   ) => {
-    const confirmed =
-      window.confirm(
-        `Are you sure you want to delete ${user.name}?`,
-      );
-
-    if (!confirmed) return;
+    const result = await Swal.fire({
+      title: "Delete Route?",
+      text: `Are you sure you want to delete ${user.name}?`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#dc2626",
+      cancelButtonColor: "#64748b",
+      confirmButtonText: "Yes, delete it",
+      cancelButtonText: "Cancel",
+      reverseButtons: true,
+    });
+    
+    if (!result.isConfirmed) return;
 
     try {
       setDeletingId(user.id);
@@ -884,7 +892,7 @@ export default function UsersPage() {
 
                 {/* ROLE */}
 
-                <div>
+                <div className={`${!editingUser && "sm:col-span-2"}`}>
                   <label className="mb-2 block text-sm font-semibold text-slate-700">
                     Role
                     <span className="ml-1 text-red-500">
@@ -928,7 +936,7 @@ export default function UsersPage() {
                 </div>
 
                 {/* DEPOT */}
-
+{editingUser&&
                 <div>
                   <label className="mb-2 block text-sm font-semibold text-slate-700">
                     Assigned Depot
@@ -1010,7 +1018,7 @@ export default function UsersPage() {
                       ? "Administrators are not assigned to a specific depot."
                       : "Select the depot assigned to this user."}
                   </p>
-                </div>
+                </div>}
 
                 {/* PASSWORD */}
 
